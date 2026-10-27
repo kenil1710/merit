@@ -3,7 +3,7 @@ import "server-only";
 // Builds the public record of a campaign from the chain, plus the judge's
 // stored reasons (checked against the hash each ledger entry carries).
 
-import { RpcClient, findLedger, loadReport, loadState, meritEvents, type ValidatorOutput } from "@/lib/merit/chain";
+import { RpcClient, findLedger, loadReport, loadState, meritEvents, type MeritEvent, type ValidatorOutput } from "@/lib/merit/chain";
 import { ENTRY_STATUS_NAMES, PHASE_NAMES, RPC_UPSTREAM } from "@/lib/merit/constants";
 import { verifyJudgement, type JudgeRecord } from "@/lib/merit/judgement";
 import type { MeritState } from "@/lib/merit/state";
@@ -51,13 +51,20 @@ export type CampaignView = {
 
 const s = (v: bigint) => v.toString();
 
-async function payoutFor(contributor: string, postId: string, round: number) {
+/**
+ * The payout transaction for one entry. Settlement's payout step takes the round's ledger as an account, so it is
+ * among the ledger's own (few) transactions; the recipient's wallet, which can be busy, is the fallback.
+ */
+async function payoutFor(ledgerEvents: MeritEvent[], contributor: string, postId: string, round: number) {
   const pattern = new RegExp(`^Merit paid (\\d+) kelvin to ${contributor} for post ${postId} \\(round ${round}\\)$`);
-  for (const event of await meritEvents(rpc, contributor, 25)) {
-    const line = event.lines.find((l) => pattern.test(l));
-    if (line && !event.failed) return { payout: event.signature, payoutLine: line };
-  }
-  return {};
+  const find = (events: MeritEvent[]) => {
+    for (const event of events) {
+      const line = event.lines.find((l) => pattern.test(l));
+      if (line && !event.failed) return { payout: event.signature, payoutLine: line };
+    }
+    return null;
+  };
+  return find(ledgerEvents) ?? find(await meritEvents(rpc, contributor, 25)) ?? {};
 }
 
 async function decisions(ledger: MeritState): Promise<DecisionView[]> {
@@ -108,7 +115,7 @@ async function decisions(ledger: MeritState): Promise<DecisionView[]> {
           approve: approve?.signature,
           verdict: verdict?.signature,
           verdictLine: verdict?.lines.find((l) => l.includes("verdict")),
-          ...(await payoutFor(entry.contributor, postId, Number(ledger.round))),
+          ...(await payoutFor(events, entry.contributor, postId, Number(ledger.round))),
         },
       };
     }),

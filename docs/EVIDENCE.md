@@ -614,3 +614,5 @@ Notes:
   escrow went back to the test owner (`5X1Xo2uDR4dVXLN4yP6TgjXZ9ZdkECturMHueux92Xwh1KEGWBiKRkXinXk2QcEp9VPBVFdJc9ZbizBdiMqztRMU`,
   0.15 RLO), and so did its operations budget (`4eKTYDJh3GDUC8b6Xz7eo5AikkpNiXccHtGDtS6TBHZa4UjJycZhnCykVaYXXfMZ9JLcRE6aRT8ukvSsiQ6TfrYq`,
   0.0406 RLO). The other 0.0594 RLO had repaid the agent for three REX checks and the ledger rent.
+- **Round 32 paid:** the program's settlement timer paid 0.06 RLO for post `2115000077697929331`
+  (`24MkbwAh…`, found in ledger `Bo7V…`'s own transactions).
