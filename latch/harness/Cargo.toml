@@ -1,0 +1,10 @@
+# Compiles latch/merit-x-submissions.rs the way Latch's custom_code editor does (the body spliced into
+# `fn on_request(ctx: &RequestContext) -> PolicyResult`) against stand-ins for Latch's Rust SDK, and tests it.
+# Standalone: not part of the Merit workspace.
+[package]
+name = "latch-policy-harness"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]

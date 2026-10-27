@@ -1,0 +1,13 @@
+[package]
+name = "merit-tools"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Derives Merit workflow slugs and PDAs with the same Rialo code the program uses"
+
+[dependencies]
+merit-core = { path = "../../crates/merit-core" }
+rialo-venus = "=0.18.1"
+rialo-types = "=0.18.1"
+rialo-s-program = "*"
+merit = { path = "../../programs/merit", default-features = false }

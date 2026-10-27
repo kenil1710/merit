@@ -1,0 +1,9 @@
+[workspace]
+members = ["programs/merit-hello", "programs/merit", "crates/merit-core", "tools/merit-tools"]
+exclude = ["programs/merit-hello/artifact", "programs/merit/artifact"]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1

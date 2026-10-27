@@ -1,0 +1,8 @@
+[package]
+name = "merit-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Pure settlement rules for the Merit Venus program (no I/O, no Rialo types)"
+
+[dependencies]

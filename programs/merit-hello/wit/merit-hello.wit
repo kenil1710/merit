@@ -1,0 +1,10 @@
+package rialo:merit-hello@0.1.0;
+
+use rialo:primitives@0.1.0.{pubkey, lamports, timestamp, error};
+
+world merit-hello {
+    export create: func(rex-bytecode-account: pubkey) -> result<_, error>;
+    export start-timer: func(delay-ms: u64) -> result<_, error>;
+    export start-heartbeat: func(interval-ms: u64, beats: u64) -> result<_, error>;
+    export probe: func(delay-ms: u64) -> result<_, error>;
+}

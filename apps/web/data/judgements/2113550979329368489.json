@@ -1,0 +1,13 @@
+{
+ "campaign": "G1JjiebaNvYQVBN4tscddqdKRZLfjJR2pgTVrBScx2TN",
+ "round": 1,
+ "canonical": "{\"author_id\": \"1658044857343000579\", \"checks\": {\"author_matches\": true, \"long_enough\": true, \"mentions_rialo\": true}, \"created_at\": \"2026-10-23T08:39:56.000Z\", \"post_id\": \"2113550979329368489\", \"reasons\": [\"Picks REX validator web-fetching, one of the three allowed topics\", \"Clear core idea, but omits how confidentiality works\", \"Casual tone is readable; the 'no oracle needed' claim is unexplained\"], \"score\": 58, \"usage\": {\"cache_creation\": {\"ephemeral_1h_input_tokens\": 0, \"ephemeral_5m_input_tokens\": 0}, \"cache_creation_input_tokens\": 0, \"cache_read_input_tokens\": 0, \"inference_geo\": \"global\", \"input_tokens\": 319, \"output_tokens\": 369, \"output_tokens_details\": {\"thinking_tokens\": 281}, \"service_tier\": \"standard\", \"speed\": \"standard\"}}",
+ "submissionHash": "fTzfxvv2a2TjbEFRfaDSKK8i8QrzCtvm3ispnZuhfZb",
+ "text": "cool thing about Rialo: validators can fetch real web data themselves (REX)\n\nso Merit checks my X post is actually mine and posted inside the round, right on-chain. no oracle needed",
+ "judgedAt": "2026-10-23T08:40:09Z",
+ "outcome": "approved",
+ "contributor": "GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN",
+ "xUsername": "KenilVekar1752",
+ "approveSignature": "62KditLizq1tRcvVUAcAJJpb8rXUSAxH11485dP4v1TAtA4pC8AhJTGkFJwK9Fv1U39e5RbMiKor7NJJMJHpUM8u",
+ "openLedgerSignature": "ovEUjALw8pNiko9Li3zhWJj44a7EEU95YLtE1ftijF8eHJdA6JWDL2KQYKoTvchPfQ8kgmK4bzYSYJArXzd6KkL"
+}

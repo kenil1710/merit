@@ -1,0 +1,450 @@
+{
+ "date": "2026-10-27",
+ "program": "4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6",
+ "owner": "GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN (merit-contributor-demo)",
+ "agent": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz (merit-agent-devnet)",
+ "campaignA": "B8Z2YehXyyLeqQeM6mEbTpMVjGTrrRrhjr371eG6DaSn",
+ "campaignB": "5mRrC8meQRsNkxiSZPN6qgCMAYjbb1wgm5UaD44esFU",
+ "cases": [
+  {
+   "case": "create_campaign rejects an agent equal to the owner",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3cTCgPVdzPc2tXR2GGuV8zrtwSzJwyBoxYN99yiHXjzmXq9ihqoD8okKgqLAn72M8bz8FWJ97V8VQ5ZToBa4hJmZ",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected campaign: agent must be a separate key"
+   ]
+  },
+  {
+   "case": "create_campaign rejects caps out of order (payout cap above round cap)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4ZHHtjbEBovMiGc5Zr9gqrgwDGrYmvtiGHsKQqqhvCU4eQbCi1SPzAPyStJbXGZpB3ceJQFmoTbKD2guiN1xcijX",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected campaign config: CapOrder"
+   ]
+  },
+  {
+   "case": "create_campaign rejects a rate above the per-payout cap",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5KNXY91wHFKfw2dqhfeE2GA6DGJgzp83cGwCJDyC5NSrL1u3A1CuCEfcqrZFAqCXEVaNiFAZtjDe5gkZPfo3igWv",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected campaign config: CapOrder"
+   ]
+  },
+  {
+   "case": "create_campaign rejects a zero rate",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5f14M19B3z3rrC9a4Meq6kEApjgEt1w9omGRyhbeDexCrK13qNe4P5y3CDJWwAHQ3nMbzKqodFGwDJpVmZeGPKgh",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected campaign config: ZeroRate"
+   ]
+  },
+  {
+   "case": "setup: create test campaign A",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "63XVR1iCLdPckaHHyZL8dvcimNtPg3j2MXstgYzwhuR6cbf74oWaEtxUjGHMt4Sq2McGqUYu7kyPEKYhFtbTwtN9",
+   "err": null,
+   "merit": [
+    "Merit campaign B8Z2YehXyyLeqQeM6mEbTpMVjGTrrRrhjr371eG6DaSn created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: create test campaign B",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5dX3y9o2wvevh4Yi2CWHjp5UC1k6v8MquCKABpQLb6zwqZaCm5TznvyMf9dbGqwriPZMXg5RL4HoW1YgQjcp5Ccd",
+   "err": null,
+   "merit": [
+    "Merit campaign 5mRrC8meQRsNkxiSZPN6qgCMAYjbb1wgm5UaD44esFU created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: fund A 0.15 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "4znRGni6DVNHKQp2pGn59auPYuAu8mRRib3m8wBxAJEkUkWkTjCsmn5r86PgVy6WLGWqUEeqPm2e4wc6HxC5vxKJ",
+   "err": null,
+   "merit": [
+    "Merit escrow funded with 150000000 kelvin (escrow 150000000)"
+   ]
+  },
+  {
+   "case": "setup: fund A's operations budget 0.1 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5kH4APaamFzEhBWgFfqnZouyeyoB1hqwR25EY8nzT4wwSmbc5AGfZaUGfeWNiamVNHBhkGJNPTSJbiVqmHKNU6CL",
+   "err": null,
+   "merit": [
+    "Merit operations budget funded with 100000000 kelvin (budget 100000000, ~8 verifications)"
+   ]
+  },
+  {
+   "case": "open_ledger rejected before the round opens",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3QdZ2ziReBpChWUy3yi64XsRxg5Hy5x6uHs81nedsTxTtxjrMYzfztTvJ3DGik1MQw4PaKhPpgmJao8kCX8BZXkF",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected ledger: not the agent of an open round 1"
+   ]
+  },
+  {
+   "case": "setup: start A (round 1)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "c6JaRmUSyBJ4wfScw8coT6gKVeE4PgNbMi368a1cUx5oNRjcTn3ePhtsBSSdVZ5GNWqgC3DAJSKjaKfLa4JMDRR",
+   "err": null,
+   "merit": [
+    "Merit round 1 open until 1793091975594 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "stranger: withdraw from A",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4AzQshf7TfPwj89yLxEKKo683a68FRhZt5QbFmENRukeCLBtBEBXhBYEb4GH21QP1sQVNb9o5PvTLUch8X7MfqUt",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the campaign owner"
+   ]
+  },
+  {
+   "case": "stranger: set_agent on A to itself",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2Tm34gngpP3bx7LQdahkyCveedCypWVrLNzCtqv9Hj2FXbr6PAVWCu5sMTc7XfCmX7dKdHxSLXoTVjnbwYKwsNXM",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the campaign owner"
+   ]
+  },
+  {
+   "case": "stranger: end A",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2Ygz9Genaj2gug4PDVPWr7yTvnPgyPsLmegSnCSpQkcuZNMVPTrkUpKEyFYADnAnHgYvfTGC7mMyZVEsHxwz1o3B",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the campaign owner"
+   ]
+  },
+  {
+   "case": "stranger: withdraw_ops from A",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "8EERafzGCNyup3HVVbvfkFx2AvuwoFcFBKFzehDmvppeFXXX9HfJNNtKFJmNNqTgXNy3bLrQ4nNZcVLQBD7qHLP",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the campaign owner"
+   ]
+  },
+  {
+   "case": "owner: withdraw more than the unreserved escrow",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "42hnAResop7FjTx4PKEAbEspeGtv9GA9MV41oQQs7Ba3yFgAXP61SxdbWntbBdfzVjGBeV8XpPMqKKBvhvtQ1ZqJ",
+   "err": "{\"InstructionError\":[0,\"InsufficientFunds\"]}",
+   "merit": [
+    "Merit rejected withdraw: 1000000000 requested, 50000000 unreserved"
+   ]
+  },
+  {
+   "case": "stranger: open a ledger for A (not A's agent)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3H8zSFB5hgzrmXafe23UikiGqnLVGHkDECtsaVUiXon7HaHNJPztuptgxoVJoYsCodQAgmT2RC64L9tqUtJDtWiM",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected ledger: not the agent of an open round 1"
+   ]
+  },
+  {
+   "case": "agent: open a ledger with a slug that isn't ledger_seed(campaign, round)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4zH3drw7vzDvwhJx3wvCCnbJLbPVvxyMDFX3BpmfYSzLzw6fAX8mM82qb2ZjWEk5HKaKVjRUBuTPymozHc9SatZf",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected ledger: slug is not ledger_seed(campaign, round)"
+   ]
+  },
+  {
+   "case": "setup: agent opens A's round-1 ledger",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "62xfsDmwThwmBc9449GigpdRK2s4LBBmLWgPXkGxTuxtqZi3hMG9aK6CUVAbL8i9L7darqnHLxFMzAJBRJhkHP7f",
+   "err": null,
+   "merit": [
+    "Merit ledger opened for campaign B8Z2YehXyyLeqQeM6mEbTpMVjGTrrRrhjr371eG6DaSn round 1"
+   ]
+  },
+  {
+   "case": "approve: score 101 (above 100)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "54mDN7xLtAJxKYgTzHMgJLKYcogAqzxj2VCgzhSNPcfgBqxEVyB5QedCWXNy7ZXGGh3Uja34fNN98Qs16ud9euia",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000001: ScoreRange"
+   ]
+  },
+  {
+   "case": "approve: score 40, below the campaign minimum 50",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2x71yQ4v6Lrbx5JQN7s8fPHeTy6odr2q6qr3DhwkN7n65eQ7uzTmhSQ1Pvy8CiynsXezPwT343CrUyCWUF9dBTek",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000001: ScoreBelowMinimum"
+   ]
+  },
+  {
+   "case": "approve: x_user_id 0",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "56UhTZLNsX8xeT7kNr3mQ73JyRzYYD1TFRr9vKuaYsG96qPNr1S62yE4CsMPXzNCyjPARV3yXioUjJgGTZcKWg18",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000001: ZeroId"
+   ]
+  },
+  {
+   "case": "stranger: approve on A's ledger (not the ledger agent)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "37YeHP6bJhEYpUpmCGwZPBRTLAx9r4YH9pRaWNXM8KyjagPmXuro58UVgTN9aCk5fYkKfz4v1yBCXoCjzHMPBMQL",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the ledger agent"
+   ]
+  },
+  {
+   "case": "setup: approve alice's post 1 at score 100 (0.05 RLO)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3zaa8G5DvB6aVFh17Uh2ZwVFTrW76NMXgj8Szsd6inAAkbjNG4E5VRLFRUxi8P7KNKfkQM1nq5H9oMiSZn53tN27",
+   "err": null,
+   "merit": [
+    "Merit approved post 1000000000000000001 by X user 11: score 100 -> 50000000 kelvin (entry 0)"
+   ]
+  },
+  {
+   "case": "approve: alice again, 0.05 + 0.05 over her 0.08 RLO per-contributor cap",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2RJXFTf17Z6AeUZku9F2gT3aoeLQtk7xP5xZLtHR2iEMFhq93qn3Lvy5ejrsxZ4bMV5sirXzhH6wnJxGbTU8p8bn",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000005: ContributorCap"
+   ]
+  },
+  {
+   "case": "setup: approve bob's post 2 at score 100 (round now at its 0.1 RLO cap)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5VBXsbN88XsPC58CdQRmoAgGBWbumUDJimMeweQBUGYec3EsVdjtY7pMaEdU42iwTBpQnnv1crQMQKzAC49r5fWg",
+   "err": null,
+   "merit": [
+    "Merit approved post 1000000000000000002 by X user 22: score 100 -> 50000000 kelvin (entry 1)"
+   ]
+  },
+  {
+   "case": "on_verify for entry 1 called directly with entry 0's real REX report",
+   "expect": "rejected",
+   "pass": false,
+   "signature": "4yKznKPmdNDoYDQBEX22S1RKNPZHVFCDsXZQkAHTU9thoFY6hhpVbGtDiQAUibqVHLAS6DUUEheLVBgqKcqEjsyn",
+   "err": null,
+   "merit": []
+  },
+  {
+   "case": "approve naming campaign A in its data but passing campaign B's account",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5PJAFNL67xykpmFs5pZ7D1tpdLbArrZjFrqXdN2HSNiYVkh84Acwjf83VJH3nLoAXwFmbCZJSt6BypznWAiVSqAq",
+   "err": "{\"InstructionError\":[0,\"NotEnoughAccountKeys\"]}",
+   "merit": []
+  },
+  {
+   "case": "approve: the same post again (duplicate)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "52xvnMzhRG8WKDyfcteYNG69hdip4DQkVVpctijH67vAsek5vDSxmjuQh1mhxkiFUitKZpedSANfSvMPAzMzJenn",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000001: DuplicatePost"
+   ]
+  },
+  {
+   "case": "approve: alice's X account with a different wallet (identity mismatch)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2QeZd8GS5cVA3fYoJW1tSWyi3qhBVMZAcZmauYbcKxogcsBZB5jARuJHjRVQVrTL1iYGPsCEoMmkEWxQVGYLT2sq",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000004: IdentityMismatch"
+   ]
+  },
+  {
+   "case": "approve: carol 0.025 RLO, over the 0.1 RLO round cap (0.1 already approved)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4YdKkL2GDjN9ddESYDq5AmCPuEq2Y24wG75YcqNYpaui8kZNYzDt8KM8TnxjHoben7jfqThMCjAsLoQCJQgDfpr8",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval of post 1000000000000000006: RoundCap"
+   ]
+  },
+  {
+   "case": "stranger: revoke entry 0",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4aA4CyZ3C6n3RyvKi4KUF5E6J83icx6ZrHnEKLK6gjJ5Ee8tVGan1JwFBdV4PxvZCPyjGYxhm8AjHoDsQutJ3XEb",
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the ledger agent"
+   ]
+  },
+  {
+   "case": "agent: revoke an entry that doesn't exist (index 9)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2CYenWFCnjonwFcofYUPua81sR7aziLgv4ndzn2VqJ1WAQicGGncingjwLhMXfgE5AYnuHgWoNpuV9dnuyEtPqGa",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected revoke of entry 9: already settled or not this round"
+   ]
+  },
+  {
+   "case": "setup: agent revokes entry 0",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2gSHWKoH3MbSTYZuMGAUjHqvWGDAV82zMgu4rDLBUSuZ7ucjK7hmjg9yHEQU6DaASx58gFvU6eETn91Nmg4L71f",
+   "err": null,
+   "merit": [
+    "Merit revoked entry 0 (post 1000000000000000001)"
+   ]
+  },
+  {
+   "case": "agent: revoke entry 0 again",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3wdrs1eUaV4D7TqEJdKTnfcz5DVryHrHxN1Sx4Le3rPGx8E9c5VNFck1VHxNH24JAv3ExqFNVaKQe5QXGGoSXFg1",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": []
+  },
+  {
+   "case": "setup: owner sets a 1-hour payee cooldown on A",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "66KwZ723JkdhVU2ryRULgTokUKne2hs1iRsBUCJCGgg25SKGdUhbM8o7aYV7neASSu2PgGg3eB2YZGT54pNnKq2L",
+   "err": null,
+   "merit": [
+    "Merit limits: 1000000000 kelvin per 24h, owner approval above 1000000000, cooldown 3600000 ms, grace 0 ms"
+   ]
+  },
+  {
+   "case": "approve with a cooldown but no payee registration",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "56Scc3M9fTNzngzr5qrnpMBn49Rs2Fmy6q1D37K3LUH9Big7wxN5vEp5iUMnNwjKzH6TXouSgDiUsB4mT2gkMedx",
+   "err": "{\"InstructionError\":[0,\"InvalidAccountData\"]}",
+   "merit": []
+  },
+  {
+   "case": "setup: agent registers dave's wallet as payee",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2pVq7ABcr3deUjq3JjeWeBXzK1hK4511mnd4GNjxRH8BuzHQsVk1zzBaYyhix93sSGPr4wX2KpNSerSWAgatAtD",
+   "err": null,
+   "merit": [
+    "Merit payee X user 44 registered wallet FtSUvAvf9F59KZvMmU9YmqnS1WZgYR3bvmZCHYUTyomZ at 1793090852882"
+   ]
+  },
+  {
+   "case": "approve inside the payee's 1-hour cooldown",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "gBtDKjJ7qLFR2JA5ZHfnp4mcPmAvmRKmiicaqgUwxNE1xAh29QhZCzCTLUkLaR7viNBkJetCqc42hCFKKfGj6ev",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval: wallet registered at 1793090852882, cooldown 3600000 ms"
+   ]
+  },
+  {
+   "case": "stranger: open a payee for A (not A's agent)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "31yvGwqiHXhzbosyw2t7p9RtUgFzFoZ5FmdpCRTW8sqsTHtYxB2kpGwaBbH5CjtzyhHgegUPGDAgUx2FkweD8GgZ",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": []
+  },
+  {
+   "case": "setup: owner pauses A",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2M4xcW6DAMqzoSFEhd8zwtd3wZB89V6649dvxzqcu9JvathSHcufHUAjLBnAtkrv7uKdH1uih8YUUDuuZkcxLY8H",
+   "err": null,
+   "merit": [
+    "Merit campaign paused (phase 1)"
+   ]
+  },
+  {
+   "case": "approve while the campaign is paused",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "21h91KgDm8re7ipF5hCCSLaofhfvV2zsjEEDfNrqEy2Fxh1ooJR4sYx2AAbfSx2f2AAwmquz9GB9YTtuQvNEi33u",
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected approval: round 1 is closed or the campaign is paused"
+   ]
+  },
+  {
+   "case": "setup: owner unpauses A",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3yqd8JkTUyuhWSFQgwpjweZoT6pUYhZJrdwa6V5WdRb2oNX2hrDJAoZMYysjvSRXWLvArXTQNJ6HHhhD8muL3ZcX",
+   "err": null,
+   "merit": [
+    "Merit campaign unpaused (phase 1)"
+   ]
+  },
+  {
+   "case": "setup: owner sets the cooldown back to 0",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2nKhBP99kEcRKScU4H7ChW2LtmrrK9KZHnczJ3zGaq6y9TgsKvKn2sQeNsS6NaP8BdJkzBcQjo3DvgbQwA2wFbyd",
+   "err": null,
+   "merit": [
+    "Merit limits: 1000000000 kelvin per 24h, owner approval above 1000000000, cooldown 0 ms, grace 0 ms"
+   ]
+  },
+  {
+   "case": "on_verify for entry 2 called directly with another entry's real REX report (7HTgYemAmku4G74qY3u9uV7TRhMxRt4efaHYV7skJEFh)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5VjnEgakhyyPkirTAnq6jbRuyLVtRgGKNeHGxrYbU9gTaC1yVY5z23QTi6TjNisoTf2nWS2k1QRhsyYmpShonG2G",
+   "err": "{\"InstructionError\":[0,\"InvalidAccountData\"]}",
+   "merit": [
+    "Merit rejected report: not this entry's REX report account"
+   ]
+  },
+  {
+   "case": "cleanup: end A",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5NeYdKAb4HHMe84mCzkDUxWeQbkQg63vkCJypQQzuvLBCvQi7NshqLnbtL5w1oWQScgMSEqzpvRmDVjkQadfCbT5",
+   "err": null,
+   "merit": [
+    "Merit campaign ending (phase 1)"
+   ]
+  }
+ ]
+}

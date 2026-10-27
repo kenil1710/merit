@@ -1,0 +1,28 @@
+package rialo:merit@0.1.0;
+
+use rialo:primitives@0.1.0.{pubkey, lamports, timestamp, error};
+
+world merit {
+    export set-payee: func(wallet: pubkey) -> result<_, error>;
+    export create-campaign: func(agent: pubkey, rate-kelvin: u64, min-score: u64, cap-per-payout: u64, cap-per-contributor: u64, cap-per-round: u64, round-length-ms: u64, refund-deadline-ms: u64, rex-bytecode-account: pubkey) -> result<_, error>;
+    export open-ledger: func(campaign: pubkey, round: u64, x-token-hex: string, rex-bytecode-account: pubkey) -> result<_, error>;
+    export open-payee: func(campaign: pubkey, x-user-id: u64, wallet: pubkey, rex-bytecode-account: pubkey) -> result<_, error>;
+    export fund: func(amount-kelvin: u64) -> result<_, error>;
+    export start: func() -> result<_, error>;
+    export end: func() -> result<_, error>;
+    export withdraw: func(amount-kelvin: u64) -> result<_, error>;
+    export fund-ops: func(amount-kelvin: u64) -> result<_, error>;
+    export withdraw-ops: func(amount-kelvin: u64) -> result<_, error>;
+    export refund: func() -> result<_, error>;
+    export resume: func() -> result<_, error>;
+    export set-agent: func(agent: pubkey) -> result<_, error>;
+    export set-round-length: func(round-length-ms: u64) -> result<_, error>;
+    export pause: func() -> result<_, error>;
+    export unpause: func() -> result<_, error>;
+    export close-round: func() -> result<_, error>;
+    export set-limits: func(max-per-day: u64, approval-threshold: u64, cooldown-ms: u64, submit-grace-ms: u64) -> result<_, error>;
+    export approve-round: func() -> result<_, error>;
+    export approve: func(campaign: pubkey, contributor: pubkey, x-user-id: u64, post-id: u64, score: u64, submission-hash: pubkey, payee: pubkey) -> result<_, error>;
+    export retry-verify: func(campaign: pubkey, index: u64) -> result<_, error>;
+    export revoke: func(campaign: pubkey, index: u64) -> result<_, error>;
+}

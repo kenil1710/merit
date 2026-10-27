@@ -1,0 +1,55 @@
+# Secrets — never commit
+.env
+.env*
+!.env.example
+!.env.local.example
+*.pem
+*.key
+
+# Keypairs and wallets
+*keypair*.json
+*-keypair.json
+id.json
+wallet*.json
+*wallet*.json
+keys/
+.keys/
+.rialo/
+rialo-config/
+
+# Rust / Rialo builds
+target/
+**/target/
+*.polkavm
+.rialo-build/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Private: security findings are shared with the Rialo and Latch teams only (kept in ~/merit-private)
+docs/SECURITY_REPORT.md
+docs/SECURITY_NOTES.md
+SECURITY_REPORT*.md
+merit-private/
+
+# Misc
+.DS_Store
+*.log
+coverage/
+playwright-report/
+test-results/
+.e2e-results/
+*.secret
+
+# web app local data (judgements, links, sessions created in dev)
+apps/web/.merit-data/
+apps/web/next-env.d.ts
+apps/web/*.tsbuildinfo
+apps/web/.merit-data-e2e/
+apps/web/e2e/.results/
+.e2e-results/

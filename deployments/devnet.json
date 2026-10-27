@@ -1,0 +1,383 @@
+{
+  "network": "devnet",
+  "rpc": "https://devnet.rialo.io",
+  "nodeVersion": {
+    "getVersion": "cb9dfc40c9c2a7953a614b4cd4db49c4026ef61d",
+    "apiVersion": "0.23.0-alpha.0"
+  },
+  "tooling": {
+    "rialoman": "0.3.0-alpha.0",
+    "rialo": "0.18.1-2e1fdefe31cc",
+    "rialoRustToolchain": "0.0.3",
+    "rialoVenus": "0.18.1",
+    "host": "macOS 26.2 arm64 (native, no VM)"
+  },
+  "updatedAt": "2026-10-26",
+  "deployer": "5g55ZNWSdsVbwNz49jkAVz8YDeKadhEBBK6KWAQEyrpz",
+  "phase1": {
+    "merit-hello-v1": {
+      "commit": "79c405b",
+      "programId": "8BrXCijRFpdtfFLDVWgo6sNKeoLHTJ2WQEoMmr6kRGfJ",
+      "rexBytecodeAccount": "di991aYCkYytunykifbyDMgP5gXPJtBheDfQrJ5CvSX",
+      "workflowPda": "JAVFiWdiiupRKkrXWzMGBQKips2kNdZRxBNGR4xCaenF",
+      "status": "superseded (relative AFTER n seconds fires immediately on DevNet)"
+    },
+    "merit-hello-v2": {
+      "commit": "8e0d7e8",
+      "programId": "GAqPJTBP3sTRh4LMbp7v711coKxMLKpBWwd84nM9A7H3",
+      "rexBytecodeAccount": "49yaLnmMdFswFK1j8KXSjR3Nkm26KuqRHvwBppRMS1TP",
+      "workflowPda": "EBiMKkUJAAgBLEhX7Pwx3K7EfqBCdhovMDMjESfGUpeX",
+      "status": "active probe",
+      "upgrades": [
+        {
+          "commit": "2e1db18",
+          "note": "in-place upgrade adding start_heartbeat cost probe"
+        }
+      ]
+    }
+  },
+  "reserved": {
+    "meritProgramId": "4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6",
+    "meritRexComponentsId": "SufLA3Vvm5x7ag2RSctyJhgceMQS1ht8rYAadjdvQvb",
+    "agentAuthPubkey": "GM4VP1it1dLVwAKQbY9yJZ7yAWQokGQsRZgcj5FMWfRn",
+    "agentDevnetPubkey": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz",
+    "agentDevnetNote": "interim agent authority (keystore alias merit-agent-devnet) until the merit-payout-signer latch exists; agentAuthPubkey stays the Latch authorization key"
+  },
+  "costs": {
+    "heartbeatTickKelvin": 0,
+    "subscriptionFloatKelvin": 4892880,
+    "rexVerificationKelvin": 11511840,
+    "txFeeKelvin": 0,
+    "measuredAt": "2026-10-22",
+    "campaignRentKelvinEstimate": 22981920,
+    "ledgerRentKelvinEstimate": 24067680,
+    "rexReimbursementKelvin": 12000000,
+    "campaignAccountBytes": 634,
+    "ledgerRentReimbursedKelvin": 22710480
+  },
+  "latches": {
+    "merit-judge": {
+      "linkId": "lnk_f68b080362114d7c",
+      "proved": "2026-10-23"
+    },
+    "merit-x": {
+      "linkId": "lnk_73ba8d5cc46c4c72",
+      "proved": "2026-10-23"
+    },
+    "merit-payout-signer": {
+      "status": "blocked: account offers no Privy signer secret; asked Latch support"
+    }
+  },
+  "phase3": {
+    "program": "programs/merit",
+    "status": "deployed; real round settled and paid on DevNet",
+    "approveTag": 17,
+    "approvePrefixHex": "11000000"
+  },
+  "merit": {
+    "programId": "4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6",
+    "rexComponentsId": "SufLA3Vvm5x7ag2RSctyJhgceMQS1ht8rYAadjdvQvb",
+    "deploys": [
+      {
+        "commit": "9c7d285",
+        "kind": "initial",
+        "costRlo": 2.967,
+        "programTxs": 20,
+        "rexTxs": 20,
+        "programFirstSig": "4KvdyEr3mZ59SCqajyvKA1iUaXyW716p3AxoCLax2opqLF3NrWVTEcuswpuL9UMmZ6eXtEuiRTbKuLxwRegbEoNC",
+        "programLastSig": "2x5CXq72beHRQyBhreMBASaJ8EZVXAC1KaymqYbSvxLCG53fmN6dtExM8zZzvo3Ma292kCfbLWpxYTXH5m2qwcES",
+        "rexFirstSig": "24j828NeqV5F4eQW2DcrHwpgxJfZGg9Adxy6JMfvWjftGgvm35cpgEbDWDuZ51VfAXYCwnN1ydDDh1ctUzvuNrWg",
+        "rexLastSig": "4LfwLhQNbc9PCnDGreKAEumXEuYFGJbhGfM76Dom69E5s2iARqnHPsFiXM4ViDo2ZsFbcerRMmYCrf5SEVup1rdH"
+      },
+      {
+        "commit": "aad225c",
+        "kind": "upgrade",
+        "note": "open_ledger takes hex token",
+        "costRlo": 0.008,
+        "lastSig": "4ZyTkHvceqYqKKDfCvfXz2L6Zx2gpVK9mrxZZs6x3bpL5scZWUdD8D12zsebxKm8S2hVQwojc96tgeoGt3M5XbHn"
+      },
+      {
+        "commit": "edb272f",
+        "kind": "upgrade",
+        "note": "resolve accounts by key",
+        "lastSig": "47vhsa6nTFWwYhPGTm3cWEEXduAUGKWAenDbYXy7nxpuXvNKwGRvcZhXDnWhXt4oAeCeSHfTaFqNTREkepvs4cEo"
+      },
+      {
+        "commit": "de0c31a",
+        "kind": "upgrade",
+        "note": "per-kind table sizes for the 200k CU budget",
+        "lastSig": "KTjpuM9VDhQikSNkFwyH5EUSJ62jv4GZipm6yCtxLq52EumyUBihqVFqbt4h6psgZcr6WREKbQVwSewBBeXtPRC"
+      },
+      {
+        "commit": "b2dfe7b",
+        "kind": "upgrade",
+        "note": "program v2: pause/unpause, close_round, set_limits (rolling 24h cap, owner approval threshold, payee cooldown, 5-min late grace), approve_round, revoke, open_payee/set_payee. New state fields: v1 accounts no longer decode, so H2Tc was ended and withdrawn first.",
+        "costRlo": 0.1226,
+        "programTxs": 20,
+        "rexTxs": 20,
+        "programLastSig": "5nwNwreTsu4dBb8NCoVWL4eqRXzNKviPUG748SRN1YPKKXdbfV5Yc1prnceWxX3UzaGyuNDJp7CzzTCYHZ54rAia",
+        "programFirstSig": "4wKKG9DWKAcTgFLyaBeDttuEUZh3VqZof8KpDxDiKn3UZmXWaC12eFqzKrwX9tQuTNQ16HXoWCxfsUsaiABrFn7P",
+        "rexLastSig": "4gbpVMV1r38RsXjWaoesDWUd646uWan5xtFvYMNZVG8dBsZnYFgvwruui5bRzxMqzs5n2LDZpFgyRKadw4sejVrV",
+        "rexFirstSig": "5j6ccNb5JprbM9Bg7etBK8GMNDK3rZdLXi6CN9h4Figrr5qL66gncET2Lj6ahbcHFUyfEghnZ4ujrT9De37Gavjw"
+      },
+      {
+        "commit": "964ba6e",
+        "builtFrom": "3ca76b8",
+        "kind": "upgrade",
+        "date": "2026-10-26",
+        "note": "REX fetch_post sends X-Merit-Campaign (the ledger's campaign) to merit-x. No state change. Upgraded between rounds 3 and 4 of 5LyX (no ledger, no REX in flight); the heartbeat stopped at beat 4 and resume restarted it.",
+        "programTxs": 100,
+        "rexTxs": 27,
+        "programFirstSig": "5zfmEeu4wBAXN1qEdb3WSdZoE3Yo7ncUWzuUvJKsa2k3sbi6aqx8i7D2S8yaUwpojZ7pgM5C81nK9MD5fQ3TtMtN",
+        "programLastSig": "3v1DGPdJ71ztFHu4ZqHVnsvTiRqteQtXu9YKAN3wWrREZKnxTSMqmDwTZhZkRBJ1TjHphY8z7EinsSwxVQUVeAf6",
+        "rexFirstSig": "3KNyC94MRfqag9zk3SQEiEHAcvjSteeUdU9JQXrAv5dmApAi62EqmezSZRapvywXReqJhierQtSLDm8GtydvW5MQ",
+        "rexLastSig": "2PFzk8ptngbebwf3t4GY7poBpaChkWag5wjpBtXxTb2WfPhrZmy65estZUJ8we2BZk7dS8Twg9rvRDdrkf1pB4YT",
+        "resumeSig": "2Xi7D8ATJDA9GKg4dHfnxNLgnDYQMXuzrFSkmtAKaQz4nJ5PQ14mpg6qRbZnjVCinieWwN398JtgcpZofFf5AukJ",
+        "onChainCheck": "REX bytecode account SufL\u2026 (91,556 bytes) contains 'X-Merit-Campaign' and 'Merit-REX/0.2', not 'Merit-REX/0.1'"
+      }
+    ],
+    "keys": {
+      "owner": "BkecjfP5fxz6s3xuAXHPPPxmoebUDkd9DsTeYBZokYwF (merit-owner-devnet)",
+      "agent": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz (merit-agent-devnet)",
+      "contributorDemo": "GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN (merit-contributor-demo)"
+    },
+    "dryRuns": {
+      "dry1": {
+        "campaign": "EzKvavy11VBExxDqhH1scCUee8SRftfDy56nVP8bG1MX",
+        "proves": "heartbeat, end, settle; unfunded start rejected",
+        "create": "2kbc8ZuEPDZvL8CcJpBX436SQxhRToV9nTvgRSd7vbcyqM8MT8WakzysDKKzGSEWpjjHzcBb3EtDzUkdV7LdbJSG",
+        "startUnfundedRejected": "2CFCkYsMgkayy5V1QU9kfb7DxprDYXVrdenjufEun43ggA1aKLgeaDuAHXKDdD3gBfuKUMV8WdDS5AVv1pZHGrPP",
+        "start": "6Li2hChLRhfz9xyQzpf25uff4DmfSknZ3AmiY4og4jRTt5f4HTsaAaVwuPGL5M7baBYhghaRJeaWjrjGCm44Jw8",
+        "end": "2SjvxS6f1AgiXxFPPfbiqXg1XvpDM1BjH3YbAhmtcVv5Dj5M3mZPj31pDH6mVTbCC5cqu74DuEJYHCCqU4tTR4YW",
+        "roundClosed": "3BFERrz3jTWLQB9pnChPme2eLf2HT3z1DiUrutDAnriQa7v5HW44QKAEDLBxNCPgpLAf2iED9k5Q5B2HeQSb3VyH",
+        "settled": "4NPrWCJCagaZQkQD4Vh6TPwKS3ajgwSZemk9yVyvWU2HXFfZt2F5iXDLMuDtDz6yrL9ufR9irb3hYK6r1FvEW7vo"
+      },
+      "dry2": {
+        "campaign": "uEZZr7sx8hQxUH5GBGixsyTthayQkqaKT5KJ3qYosRA",
+        "proves": "CLI manifest account order bug (open_ledger failed InvalidAccountData); resume after upgrade",
+        "openLedgerFailed": "62NaAcMcznf8zBEC5KzUFNohGi9aorSGg93LAzkMTeYHNW5JbDEtGURfU874iDNsUas5Dbkwp2tggae6LuMb1EvC",
+        "resume": "UCkKt6PftEJFBvT1BP7WUJrKyMgaNwjp2Mj13sEjmzQrCL8goA8gZfxNZLeutXq3jSNNmFLSBXkywQVz6JUCAm6"
+      },
+      "dry3": {
+        "campaign": "6XG4qmoraNKviKv77Ff2pYzE21ehm9YQH1aVoXHbXyVy",
+        "proves": "approve over 200k CU before per-kind tables; heartbeat killed by upgrade, revived by resume",
+        "approveOverBudget": "2gvUhWE4WLHFtWr6ScYF8TRZV6vQDAk5DoqEEW3LjKeUa7oueLiiXCcKCT1NqFWBDi4f7VsY8uz4GNZtT3qKVWJQ",
+        "lastBeatBeforeUpgrade": "7GUwPcVWVEArNFB24nPbWkZmcQdgdvr76tDhszM5zdvPnEEYRaFrW7BUCAg6pj9JZmkaFjoZ76FMPMy3XLZWvtP",
+        "resume": "2nLs4FGgbfbvJcUicjnjH2GAc6BubqN72o8f5jfHFYw91RA83DXxDMAEpJiZsGrFf1fYzDeaH6GU3vYDjzSqU66M"
+      },
+      "dry4": {
+        "campaign": "EXf9evUtJT9cEtesxn7fTKeLe5igyq3PrcwkB83Xbb2N",
+        "ledger": "J1mjvuQHgqbmJU7g7N2NVpzugtEAXrtQTu8iC9cTw3PW",
+        "proves": "REX runs; raw-encrypted String fails to deserialize (needs borsh framing)",
+        "approve": "5iwafpGaoBrGHQYRZhkVLnRJtnSio8uQnKragKf9j7oqiZhomLFRxJHHr4qRkLf7orVoK3twrFhvSvnJfJ6451uC",
+        "runVerify": "oKwVLnSaR51TFV2Gm8ghKnjoRCzTuLoBV1wEH8Ys6SArR8n6fgrgt77fFobwKB6Q3fE8JQbrmab2htc7MoVsRFd",
+        "onVerifyInconclusive": "98yM5zhLjU5y4AF5PhNnQkRSuPECtphtktb4eR8bRJL1ts5mX7HhdTdQWomdjXYmnXGkeAXFVKeDFQTyC87x2ST"
+      },
+      "dry5": {
+        "campaign": "3ZXN13vPRPkUB2qLfyH5ZR47q8rxiF54YfB88ZrZTsqG",
+        "ledger": "AmLuNUa3V8rot8dvbCrnv1H2FSi4Ey9gTyUFsrMCemAA",
+        "proves": "REX -> Latch -> X with TEE-decrypted token; unanimous report; OutsideRound verdict; reimbursement",
+        "openLedger": "WNG248oEdXJeWZSkop1imywZ3jTBfUb82DoAEjrng5JBUJz1eDHr8Lrf8vFsJ4ynE3YpVFrGc4gYqNCmoUqBntq",
+        "approve": "2BXiXhg4voXWdSEu7VupJXRvqdEq42ijmfSTTWce94gekZUd1Gpqbpe28JxHFmNmbJsvUzm7mn3ooPihiaQb95TQ",
+        "runVerify": "2rob26SFtZPFFZxSWmvrq4rxamfwNAWMsaVGoKTeGqgHEBPM9rfD5HFgfRuzpEZpKLuWRR1qFenTkHDKiD6Hv5ef",
+        "onVerifyFailedOutsideRound": "GrNyvFLwNsePZwfy1NmJxZocEqnpYpFrrwi95m7JZiDMZHzMyTG6HeYu9gSuHXynedGJznueVYwJHzFAPokpKjm",
+        "end": "62CZX7KLkEunAc4HWMqqQYPicJ3DtsdmCQXKdbCUxoSQ4wMJdmPfFyjBS8rNRxvmn465trnwhvutRCJ9ikf6b9Uh",
+        "roundClosed": "3Xk58fwbXv8CPBNnaLqovSiakVTMiumPoT8AeELwL8htXsT4YW5TD3GzamGSpAPHrZHyd8y5tNvHeYNvcHGGBU4f",
+        "reimbursed34710480": "3qRww5Kw8vHsyU7oyo4jREyscG8MrMFydhyLfdYZFXAWHrWW61JxF2c3wG1Esx9nt1M4stbUVZvDnMVn91QmG2iT",
+        "settled": "396erEWZayf3AXZcfp492rCk4QeSBn1gx5YG1r5biNuX8KXgeoqAKRgaXR8cqsf5Rt7aHguT8Ty34n2UAzNyRyXu"
+      }
+    },
+    "withdrawals": [
+      "57E1cL1pcYMqbxFzJ1npX8BieyC3LbhAGGvuSWFbut6KYhZo7SbxVqtsX5X6Tdya7peM81dHmb5p88FEcZyq6k41",
+      "4aFZvFnPUYEdSMdCfALhiHqVoU8e9wekQvX2rNa7PubrxMCwdKBn6N7ScQJ6hY6iJ4FbTmQjZh8eUeJabtJ51jLp",
+      "445LLQnsVJkm8z4hbvWG7TmZq5Cww6R11DXCBaGyyczUSXS7wiqGaXVS82x7up1qBYkRS3U5QsYt7f6tQtaZhJRR",
+      "SoDcsN4cYndHBbjLYqgRPwKfvhnnaeZVD2dQsYM5VkZxfDsRw1hWcJwrRsx1HfzCamqsonKTuhMJ4BQfVKhar23",
+      "59WAohdLRzmcVPj9Nrf7G6TKitn1jrAMZV2SBtLZyQsnrDwUyGi93jQoeGyMQhS9zY8q25vk3yu8KMC6Ues14zRQ",
+      "52dURDKbRXxxTuNjwGvfVQ3uKMzud3fG1QQjPeGLrdms3guc7hXNSoBRZrBEioWFCGnTCdgvTMY6LNJhmhJBaC1F",
+      "4cozvDSP8C6TbLq351DXa1HxTKzjyF1sw8HgDMs2vXGbDtvFdQjzDh9XKNuDQ6T5AQucGdHg7w3QPVbcS6tLxzWE",
+      "3Hswv7c3RNq5DRQdBvrDe8tvZTs6ZCdYuNrHCVihuAupArDFe6Q91UKEjbs31FP8pGmyPpTuPUcWffiZSsHA1Cue",
+      "5oeLXnDQWSrSiLELovVfhKHccpC8PdMPJ55orszfmBdJmbw4TqKZpoAJBMmS5oRHgYxT8JznuLStBnDhhuA3ZHvC",
+      "65r7kvSYSUe8eNUkRESEBN2DiG9GHSn7oU4ibSFk4x1ipd43VXz1epYeUfFj1qdDiqpZs4YLwsHM8E3XZXeqYvU5"
+    ],
+    "realRound": {
+      "campaign": "G1JjiebaNvYQVBN4tscddqdKRZLfjJR2pgTVrBScx2TN",
+      "config": {
+        "rateKelvin": 100000000,
+        "minScore": 50,
+        "capPerPayout": 100000000,
+        "capPerContributor": 200000000,
+        "capPerRound": 500000000,
+        "roundLengthMs": 600000,
+        "refundDeadline": "+24h"
+      },
+      "create": "431G2axebniG1oDAoA6pL7ZFi7F1ncRjEiTYfXZvCXi2PJD9naRaUmFR9J8V9cxoiknf274SAHL1ks1qYCgxH4gy",
+      "fund1Rlo": "2LVffaxFzBYb7epwcqZdMWMWiC5r9uRXba37JGkaQWrkxwkYDDqu7SUv4x5Fg6k74BU7JWmYsWWMMqfVz8ZpeFqw",
+      "fundOps0_2Rlo": "DvUuScjxJyhZezZ28cTYZ9AX4jrhTeAtHYtS6qt7rrnTUf9ZYDsRK2DcJSHwYbnRaSUpPZaEyFu98ZKpez75CEc",
+      "status": "ended and withdrawn",
+      "setRoundLength10min": "59BNWyuKRo9wpZj3aPsaySSfKVfH1gMkmfZj9K3wSzCjrJveZ16ft7fhQ5BMYQBrMJd3CBzj55Cj5mfkCAAY9vmC",
+      "start": "2GAxge7B1Ff1UET2cdL9fGxFZuJd3aj4suWa8LFGMeiqrFmJ9GYJhNxy39CeGmoQbHd2xLvNb2itgHdGHVYpeXHX",
+      "round1": {
+        "startMs": 1792744766619,
+        "endMs": 1792745366619,
+        "openIST": "2026-10-23 14:09:26",
+        "closeIST": "2026-10-23 14:19:26"
+      },
+      "ledger": "BGd9T17Tv6LqYPysRFdTtt4q149NPxAXKMPXMW3hY6zv",
+      "openLedger": "ovEUjALw8pNiko9Li3zhWJj44a7EEU95YLtE1ftijF8eHJdA6JWDL2KQYKoTvchPfQ8kgmK4bzYSYJArXzd6KkL",
+      "contributorX": {
+        "handle": "KenilVekar1752",
+        "userId": "1658044857343000579"
+      },
+      "post": {
+        "id": "2113550979329368489",
+        "createdAt": "2026-10-23T08:39:56.000Z",
+        "judgeScore": 58,
+        "submissionHash": "fTzfxvv2a2TjbEFRfaDSKK8i8QrzCtvm3ispnZuhfZb"
+      },
+      "approve": "62KditLizq1tRcvVUAcAJJpb8rXUSAxH11485dP4v1TAtA4pC8AhJTGkFJwK9Fv1U39e5RbMiKor7NJJMJHpUM8u",
+      "runVerify": "5zzj1W5VxKBaMM5y3BY6zbWz3VSCku8KY8mmjK84kSFF2uprumdENMsuLwBs58sPb7jFRSvowb3enHiR8rt1aNdV",
+      "onVerifyVerified": "2zqzmbrANZMSHWj32SCQTH5Q9SMhYCLQX5h5c8PWcayn78kxij9EkJ2sAZAS1NzHvQ63QefNTHLhQDvxZE6hZyAw",
+      "roundClosed123Beats": "4fSsNobT3415XooFVtwmaAdFtCykqEDLxC9ahUKbCaAmVfNEHjBRWP9SWVNE3fJdTyshwFRDDMKD2mzdZjPzUFP5",
+      "agentRepaid34710480": "4A4P2xkrPHcoTpZwB7PcgU42ixr8NTuvzT2nEdsKS8Ume3oHmUFnWC33BDb2nJdgMMyyoXucVygC3qx8ir8cbmUK",
+      "settlePlanned": "2mhVJXkKgzbJyjUEb5maijgRssKB75qd9i7afwUnBC4fLXMgs47xY1RG5Bh8ic2jQyfZjfDVXmuDDu3rocy18TRH",
+      "paid58000000": "5zJRRMjkp4ENcVSsNra4QFP5tJtRP7KUF3iGnbTLNHXTkwABveG1omB3vmdvW67ohycrFLDz8psTHagkZmrre4PZ",
+      "settledAndRound2Opened": "33TJCfrfCdgNQ3c5hvHSffmQDANeq91FRrV6QdJTRHWZ7KR3vecu8QHidMAJcAWDcKsmDDFehoNmXHgUXjDwFPiF",
+      "contributorBalanceAfter": "0.058 RLO",
+      "end": "2k1B5ZqxTfTSZcNftnGzu7HTHMvyxdrfz68Q6We7Em6zyk91CTpcpV1ue5eAXBQg8ra2GJVrTq27oyGwREhnh32x",
+      "round2Closed93Beats": "2USQJ8prh8SaX4BfbMLwsiokGYvB37VYbYGLTKpjA6q7xGFFHCATiSAEuAteJBdZfkSUfjdJQESjqz8kM5u7tyZ9",
+      "round2SettledEnded": "4qq67itraHYgYpMDcQ2bjLZPvBd6sHryx4qHxxt94qPaZNoxNSdens3JLr3F9R9HEYVtZmxvJkCzx7bbZ6LUavaT",
+      "withdrawEscrow942000000": "2qLHpMqVjUoWXWQbFHD6uwvtjsMnh8LARxdZ2u7ZAdAWRD8mpvnneTT2t6ssh1Vmo9GBVZNmLXvrsRqoYCSmEECA",
+      "withdrawOps165289520": "2PTnpVqqin1ogxtYinRkLTSD8WKuyDy8gcYXXMYGdA3wN9hTuRMs29HTgAD7M65Kn9W3xmtizE91zohz9Zy8ttws",
+      "finalBooks": {
+        "funded": 1000000000,
+        "paid": 58000000,
+        "withdrawn": 942000000,
+        "opsFunded": 200000000,
+        "opsReimbursed": 34710480,
+        "opsWithdrawn": 165289520,
+        "rentLeftKelvin": 5303520
+      }
+    },
+    "productionCampaign": {
+      "name": "Rialo in your own words",
+      "program": "7059b65e-7c75-43d6-97cb-caabb2787c50",
+      "joinUrl": "https://merit-ruby-two.vercel.app/join/rialo-in-your-own-words",
+      "publicUrl": "https://merit-ruby-two.vercel.app/p/rialo-in-your-own-words",
+      "campaign": "5LyXppXdVZHcV6bcWjJkTyir3F9PM5TEx6pTTA9jEiwv",
+      "slugHex": "31a7974518a28c3a4454cedef076b840d33201a1e447f334ec2ee5c5aac72aac",
+      "programVersion": 2,
+      "owner": "BkecjfP5fxz6s3xuAXHPPPxmoebUDkd9DsTeYBZokYwF (merit-owner-devnet)",
+      "agent": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz",
+      "reviewers": [
+        "85mG1xLku7woTPauogifC1aHWLmJJ9ZSmEbLKZ38hsd2",
+        "4UkC4Xt2suVBgXSorLSVvhx4qZDvo3Qua6GgtpVJpoMC"
+      ],
+      "config": {
+        "rateKelvin": 100000000,
+        "minScore": 50,
+        "capPerPayout": 100000000,
+        "capPerContributor": 200000000,
+        "capPerRound": 500000000,
+        "roundLengthMs": 1800000,
+        "refundDeadline": "2026-11-09T12:13:44Z",
+        "escrowKelvin": 1000000000,
+        "opsKelvin": 200000000
+      },
+      "limits": {
+        "maxPerDayKelvin": 1000000000,
+        "approvalThresholdKelvin": 500000000,
+        "cooldownMs": 0,
+        "submitGraceMs": 300000
+      },
+      "eligibility": "X accounts under 10 followers or younger than 30 days go to review",
+      "create": "4SC7N1oyUXw6ny3SgkvHJYBXy7u32NPHJe5ExZJcgZsELJ3jUmZZiwnrwCAyFi2fQrB7iXgWSPmFoA65dy5gCw4T",
+      "setLimits": "5bvG7uGpnhNvzi8dVeQpQhUCBV4BER2Nt81DhNCwxXDhDs2hGxJwHCqNCQ4n7tB5E2fAiYNWkCQg66xH55rciRsN",
+      "fund1Rlo": "2hmVQbMTew7z1WAaMDiZsHVhybgffrFFgGau8hP518LGggSWrtSKJjVuxPsFe9DpLKVnxMXyNjQgUZhHA12dWQT5",
+      "fundOps0_2Rlo": "46VVkCHq9vh7JvCHYwSKq3yFSKi8AAnoJ4JrBrNoa2heRT2zTrViYehH5jn5fkusPAF6ppjzHMGoBDztM52HmN7s",
+      "start": "2VBbUASX54hCTmcAYbU1wh5bTcoZ6amEBKP6v5jWANEjpAsq6L8A4pkjvFZWyzE2npSKC69VBqSBSokHUvoDV77p",
+      "round1": {
+        "startMs": 1793032949412,
+        "endMs": 1793034749412
+      },
+      "neon": "programs row 7059b65e\u2026 re-pointed from H2Tc to this campaign at 2026-10-26T16:42:51Z (audit event program.campaign_migrated)",
+      "vercel": "production deployment merit-gr2feaxig-kenils-projects-a3f732d1.vercel.app (commit b2dfe7b), aliased merit-ruby-two.vercel.app",
+      "status": "live 2026-10-26: round 1 opened 16:42 UTC; 30-min rounds with a 5-min late grace until the refund deadline"
+    },
+    "localTestCampaign": {
+      "campaign": "3GT82KBz8mVXS4af2oTuZFZQmdAwtr1ePHSeegMDccSC",
+      "status": "IDLE, never started; local watcher stopped"
+    },
+    "retiredCampaigns": [
+      {
+        "name": "Rialo in your own words",
+        "program": "7059b65e-7c75-43d6-97cb-caabb2787c50",
+        "joinUrl": "https://merit-ruby-two.vercel.app/join/rialo-in-your-own-words",
+        "campaign": "H2Tcic3FM3HvrFfjj3DZTBCWeCqu8WG59dYHWShuVbjB",
+        "owner": "BkecjfP5fxz6s3xuAXHPPPxmoebUDkd9DsTeYBZokYwF (merit-owner-devnet)",
+        "agent": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz",
+        "config": {
+          "rateKelvin": 100000000,
+          "minScore": 50,
+          "capPerPayout": 100000000,
+          "capPerContributor": 200000000,
+          "capPerRound": 500000000,
+          "roundLengthMs": 1800000,
+          "refundDeadline": "2026-11-09T12:13:44Z",
+          "escrowKelvin": 1000000000,
+          "opsKelvin": 200000000
+        },
+        "eligibility": "X accounts under 10 followers or younger than 30 days go to review",
+        "status": "retired 2026-10-26 for the program v2 upgrade: ended during round 9, settled, escrow and ops budget withdrawn to the owner",
+        "end": "3Ub1ekm4xBi3DSCUccxZPLrmE5BGYGREKCirBfUduu7avsxrEwdD3NjVz3Av6w1BwHx1g9TREWC9vNtz35FdSaeL",
+        "round9Closed303Beats": "5pnTLqtCKGeZ4X2PgCtd2ieUEiT1oUo3LnYt2o4Qz1WEk6mKCXKv7nLNZP2FpzEARtnYK6Ch2zb5eWUvXJ6f1zAs",
+        "round9SettledEnded": "FMa8ifnGinA5XHfpwof8WVjb6LVxtEJGt2NbB46791xxmnM7Pg7v6Sdzk8KyNtNaChb8AMiJhryvmzNtwAFLCP1",
+        "withdrawEscrow937000000": "5N4bA58CWUiWoJRw5jGL8JVBV9ekx4EPFuTaK3qKRQH4UY7ezvj5ZJFGaNjRTnMtiYhUikg3otk7tfAHnJEUXXZ",
+        "withdrawOps165289520": "3XWYufzwnEmhB1cL2okaYDowL2TzkTDvtvS84jD7cbxCF5acNdaNjjAD8BFMdsUTAt37KWS4AkmkTBX5jzqLRxAG",
+        "finalBooks": {
+          "funded": 1000000000,
+          "paid": 63000000,
+          "withdrawn": 937000000,
+          "opsFunded": 200000000,
+          "opsReimbursed": 34710480,
+          "opsWithdrawn": 165289520,
+          "rentLeftKelvin": 5303520
+        }
+      },
+      {
+        "name": "Rialo in your own words",
+        "campaign": "GKci72C57HKwxWoTE2bUFvaDKb9SgeYNLfoSZxv8KEh6",
+        "site": "https://merit-ruby-two.vercel.app/c/GKci72C57HKwxWoTE2bUFvaDKb9SgeYNLfoSZxv8KEh6",
+        "config": {
+          "rateKelvin": 100000000,
+          "minScore": 50,
+          "capPerPayout": 100000000,
+          "capPerContributor": 200000000,
+          "capPerRound": 500000000,
+          "roundLengthMs": 600000,
+          "refundDeadline": "+24h",
+          "escrowKelvin": 1000000000,
+          "opsKelvin": 200000000
+        },
+        "create": "97a2L7DYqXE6NNQZqfBrTJcG53ebbTejmR7ProjtuDZEsMn8skF3oiQVatQj29BA6Ss7qkAWiCvRQSzcNAZhMRb",
+        "fund": "3oapmVn8UmTGuq881TMLQigMyoycCzUixSyDy3G11WTiaHYoN2dKNLNsokYtJD89USRDkdJtGwSiv4Aqkmchnqe",
+        "fundOps": "xepzTEDJmnaBwYiyHicYyzLL5JavvXZrh7TyF8M8xsptmBoohsUwvadY6L6RYcMgvRUx1yRrtKav2sV679pUU1L",
+        "status": "retired 2026-10-26: refund deadline passed before round 1; ops withdrawn and escrow refunded to the owner"
+      }
+    ]
+  },
+  "phase4": {
+    "status": "deployed to Vercel (merit project); program v2 live on DevNet since 2026-10-26",
+    "agentLiveTest": {
+      "campaign": "5FAuKwU3izvGK4MELYNhkRE83XfTbCBkrGq9UwDa38ej",
+      "openLedgerTsEncryptedToken": "4xBUvm9cN8k5MtGfSBDoLWrXzESQJQuPRKku2b7kKTiJJSokroFwbTXNjbCcGrnAeFf3xaeVfojcra1mR1gQ9ycb",
+      "approve": "ajufx5TUygZ24igwVfcrY1Q1EaXfn8YPRkhBAWv7VrLds2T5sYq2fW3jwjLG3ohjx8E4f4GSTePB5rvjqcK4fFB",
+      "runVerify": "cVZ56Ndqpya1m9QQJ67mYWa92GmQGCqkPEe5krYGc5pjhBkFkA5CjGQsZXzUPFNSHH5LBg2rpo5KAM5inDEcCXZ",
+      "verdictOutsideRound": "4aH26M9uGhD5Nw2Py9LQD2DV8wFqtkqCNLv3wxV8SZmpeuRpUMes76LQMLfvsf4dhJNfjfqdFqE7ddYvzkWZ2tKy",
+      "agentRepaid": "4UVjsW6DgjL6RcwpY3NbbxYSDmpRhoEMwp9gcSWz82HxTLtJvPsdyeX4eTsK8pUph6zYtyLcv1ZGDiRXwYJ68at7"
+    },
+    "e2eOwnerCampaigns": [
+      "79LWh6xfxXXApRy5QbXy5UkMZ2t9LAJbaTgyrzY8U9FF",
+      "G4PnXBPJDwrT9qZzGTZnTfifBaxT9K2H7yv2g1JjcmYU"
+    ]
+  }
+}
