@@ -50,7 +50,7 @@ export function FaucetButton({ address: wallet, disabled, onFunded, size = "defa
   }, [status?.nextAt, load]);
 
   const blocked = status && !status.ok;
-  const note = blocked ? (status.reason === "balance" ? "Holds 1 RLO already" : nextFaucetText(status.nextAt) ?? status.message) : "1 RLO per wallet per day";
+  const note = blocked ? (status.reason === "balance" ? "Balance is already 1 RLO or more" : nextFaucetText(status.nextAt) ?? status.message) : "1 RLO per wallet per day";
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <Button

@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { RpcClient, listCampaigns } from "@/lib/merit/chain";
 import { RPC_UPSTREAM, formatRlo } from "@/lib/merit/constants";
 import type { JudgeRecord } from "@/lib/merit/judgement";
+import { realCampaignFilter } from "@/lib/server/live-campaigns";
 import { store } from "@/lib/server/store";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 export const dynamic = "force-dynamic";
 
@@ -28,21 +30,16 @@ const layers: { title: string; items: string[] }[] = [
 ];
 
 export default async function Home() {
-  const [campaigns, seed, metas] = await Promise.all([
+  const [onChain, seed, isReal] = await Promise.all([
     listCampaigns(new RpcClient(RPC_UPSTREAM)).catch(() => []),
     store.judgement(ROUND1.post),
-    store.campaigns().catch(() => null),
+    realCampaignFilter(),
   ]);
-  // Totals cover every campaign account on chain. Explore lists only campaigns with a published name, so the
-  // breakdown says how much of each total comes from the unlisted (retired and test) ones.
-  const named = metas ? new Set(metas.map((m) => m.address)) : null;
-  const listed = named ? campaigns.filter((c) => named.has(c.address)) : campaigns;
-  const sum = (list: typeof campaigns, f: (c: (typeof campaigns)[number]) => bigint) => list.reduce((t, c) => t + f(c), 0n);
-  const paid = sum(campaigns, (c) => c.totalPaid);
-  const reimbursed = sum(campaigns, (c) => c.totalOpsReimbursed);
-  const unlisted = campaigns.length - listed.length;
-  const split = (all: bigint, f: (c: (typeof campaigns)[number]) => bigint) =>
-    named && unlisted > 0 ? `${formatRlo(sum(listed, f), 4)} from the ${listed.length} on Explore · ${formatRlo(all - sum(listed, f), 4)} from ${unlisted} retired or test` : null;
+  // Real campaigns only: test runs (dry runs, negative tests, audit and e2e campaigns) are left out of every total.
+  const campaigns = isReal ? onChain.filter((c) => isReal(c.address)) : onChain;
+  const paid = campaigns.reduce((t, c) => t + c.totalPaid, 0n);
+  const reimbursed = campaigns.reduce((t, c) => t + c.totalOpsReimbursed, 0n);
+  const retired = campaigns.filter((c) => isEndedPhase(c.phase)).length;
   const record = seed ? (JSON.parse(seed.canonical) as JudgeRecord) : null;
 
   return (
@@ -85,20 +82,14 @@ export default async function Home() {
           </div>
           <div className="grid gap-6">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-10" data-testid="totals">
-              <BigNumber label="RLO paid to contributors" note={split(paid, (c) => c.totalPaid)}>
-                {formatRlo(paid, 3)}
-              </BigNumber>
-              <BigNumber label="Campaign workflows on chain" note={named && unlisted > 0 ? `${listed.length} listed on Explore · ${unlisted} retired or test` : null}>
-                {campaigns.length}
-              </BigNumber>
-              <BigNumber label="RLO repaid to the agent for REX" note={split(reimbursed, (c) => c.totalOpsReimbursed)}>
-                {formatRlo(reimbursed, 3)}
-              </BigNumber>
+              <BigNumber label="RLO paid to contributors">{formatRlo(paid, 3)}</BigNumber>
+              <BigNumber label="Campaigns run on chain">{campaigns.length}</BigNumber>
+              <BigNumber label="RLO repaid to the agent for REX">{formatRlo(reimbursed, 3)}</BigNumber>
               <BigNumber label="Keepers needed for payouts">0</BigNumber>
             </dl>
-            {named && unlisted > 0 ? (
+            {isReal ? (
               <p className="text-muted-foreground text-xs leading-relaxed" data-testid="totals-note">
-                Totals are every Merit campaign on DevNet: they include {unlisted} retired or test campaign{unlisted === 1 ? "" : "s"} that Explore doesn&apos;t list (no published name). The lines under each number split them.
+                Real campaigns only{retired ? `; includes ${retired} retired campaign${retired === 1 ? "" : "s"}` : ""}. Test runs are left out.
               </p>
             ) : null}
           </div>
@@ -239,12 +230,11 @@ function Heading({ title, children }: { title: ReactNode; children?: ReactNode }
   );
 }
 
-function BigNumber({ label, note, children }: { label: string; note?: string | null; children: ReactNode }) {
+function BigNumber({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <dd className="display text-5xl leading-none tabular-nums sm:text-6xl">{children}</dd>
       <dt className="text-muted-foreground mt-3 text-sm">{label}</dt>
-      {note ? <dd className="text-muted-foreground mt-1 text-xs leading-relaxed">{note}</dd> : null}
     </div>
   );
 }

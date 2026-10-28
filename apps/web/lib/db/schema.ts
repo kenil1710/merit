@@ -534,3 +534,15 @@ export const rateHits = pgTable(
   },
   (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index("rate_hits_window_idx").on(t.windowStart)],
 );
+
+/**
+ * What Merit knows about a campaign account beyond the chain. `is_test` marks dry runs, negative tests, audit and e2e
+ * campaigns: totals and listings leave them out. A campaign counts as real when it isn't marked test and production
+ * knows it (a program, a published brief, or a row here with is_test = false).
+ */
+export const campaignLabels = pgTable("campaign_labels", {
+  address: text("address").primaryKey(),
+  isTest: boolean("is_test").notNull(),
+  note: text("note").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

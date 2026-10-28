@@ -93,8 +93,12 @@ npx playwright test                  # e2e on real DevNet (isolated server on :3
   on DevNet, joining and submitting, the review queue, and every app page.
 - **`e2e/wallet.spec.ts`:** the wallet panel end to end (create with confirm and strength, backup, forget, import), Lock
   really locking the owner app across a reload, the Security page, and Explore's shared labels and ticking countdowns.
-- **`e2e/live.spec.ts`** (only with `MERIT_E2E_URL`): the faucet's once-per-wallet-per-day cooldown and "Read it"
-  answering within 20 seconds, on the deployed site.
+- **`e2e/live.spec.ts`** (only with `MERIT_E2E_URL`): read-only checks on the deployed site, with no sign-in, faucet
+  grant or campaign: the faucet's status answers, and homepage totals counting real campaigns only.
+- **`e2e/local-writes.spec.ts`** (local server only): the faucet's once-per-wallet-per-day cooldown and "Read it"
+  answering within 20 seconds. These write to the database, so they never run against production.
+- Live runs (`MERIT_E2E_URL`) must stay read-only: specs that sign in, use the faucet or create campaigns skip
+  themselves there. They still bump rate-limit counters, which expire.
 - **`test/audit-fixes.test.ts`:** the audit fixes on the web side (sign-in return path, Neon rate limits, typed cookies,
   housekeeping).
 

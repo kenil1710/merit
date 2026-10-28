@@ -3,11 +3,12 @@ import { expect, test } from "@playwright/test";
 
 // The tester's second report: wallet management from the sidebar chip (create with confirm + strength, backup,
 // forget, import), the wallet strip on /join and in the wizard, a Lock that really locks, live countdowns and the
-// Security page. Runs against the local server (in-memory database) or the live site.
+// Security page. Against the live site (MERIT_E2E_URL) only the read-only parts run: the wallet lives in the browser,
+// and owner sign-in, which writes to the database, runs only against the local server.
 
 const PASS = "Correct horse battery 42!";
 
-test("wallet panel: create on /join, back up, forget, import, then Lock really locks the owner app", async ({ page }) => {
+test("wallet panel: create on /join, back up, forget and import, all in the browser", async ({ page }) => {
   await page.goto("/join");
   const strip = page.getByTestId("wallet-strip");
   await expect(strip).toContainText("No wallet in this browser yet.");
@@ -63,6 +64,17 @@ test("wallet panel: create on /join, back up, forget, import, then Lock really l
   await expect(sheet.getByTestId("wallet-address")).toHaveText(address);
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("wallet-chip")).toContainText(address.slice(0, 6));
+});
+
+test("Lock really locks: clears the key and ends the owner session, also after a reload", async ({ page }) => {
+  test.skip(!!process.env.MERIT_E2E_URL, "Owner sign-in writes to the database: local server only.");
+  await page.goto("/join");
+  await page.getByTestId("wallet-strip").getByRole("button", { name: "Create wallet" }).click();
+  const sheet = page.getByTestId("wallet-sheet");
+  await sheet.getByLabel("Choose a passphrase").fill(PASS);
+  await sheet.getByLabel("Confirm passphrase").fill(PASS);
+  await sheet.getByRole("button", { name: "Create wallet" }).click();
+  const address = (await sheet.getByTestId("wallet-address").textContent())!.trim();
 
   // Owner app: sign in with it, then Lock from the sidebar chip.
   await page.goto("/app");

@@ -673,3 +673,30 @@ restarted the heartbeat (beats 7 → 12 in 25 s). No layout or instruction chang
 The `approve_round` and `fund` paths reset the same marks; they need a REX-verified real post to reach on DevNet, so
 they are covered by `merit-core` unit tests (`n1_…`) only. Full signatures: `deployments/devnet-v3-audit.json`.
 
+
+## Test campaigns and the homepage totals (2026-10-28)
+
+- **`campaign_labels` (Neon migration 0008).** Every campaign account on DevNet now has a label.
+  - **Real (4):**
+    - `5LyXppXd…` is live.
+    - `G1JjiebaN…` (round 1), `H2Tcic3F…` and `GKci72C5…` are retired.
+  - **Test (63):** phase 3 dry runs, negative-test and audit campaigns, and e2e campaigns.
+- **The homepage and Explore count only real campaigns:** not marked test, and known to production (a program, a
+  published brief, or a "real" label). Campaigns that local e2e runs create on DevNet are unknown to production, so
+  they never count.
+- **Test campaigns still open on DevNet.** Each was left by an e2e run that failed before its cleanup step. Its owner
+  key existed only in that run's browser, so nobody can end it. Each keeps opening empty rounds until its refund
+  deadline. All are marked test and hidden. Pays nothing: no approvals, no contributors.
+
+  | Campaign | Left by | Escrow | Refund deadline |
+  | --- | --- | --- | --- |
+  | `HsXRLP9xjMFHNJbTpyRXbFErB4hGUu9jBsnN1ThDm3Vm` | `owner-app.spec`, 2026-10-28 17:29 UTC (failed on a UI assertion after go-live) | 0.2 RLO | 2026-11-27 17:29 UTC |
+  | `DZzh9L5aBTRv7MkvW6GwHkiuTkvbe6UjakTUajMcsNHX` | an e2e run, 2026-10-28 | 0.2 RLO | 2026-11-27 09:32 UTC |
+  | `7X9CvR4iMKt4iEGgDnJsD8SM4BhbjbTWX6ngvkbYftGT` | an e2e run, 2026-10-26 | 0.2 RLO | 2026-11-25 10:28 UTC |
+
+- **Live e2e is read-only now.**
+  - It creates no wallet, sign-in, faucet grant or campaign.
+  - Writes run only against the local server (`e2e/local-writes.spec.ts`, in-memory database).
+  - The one live run that did write (2026-10-28 17:39 UTC) was cleaned up: 3 owner users, 4 sign-in nonces, 2 faucet
+    grants, 1 latch-call row and 3 rate counters were deleted.
+  - Its 4 `owner.signed_in` audit events stay: `audit_events` is append-only by trigger, and they name no program.
