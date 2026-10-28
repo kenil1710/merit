@@ -32,7 +32,8 @@ test("landing shows the real round 1 decision and links to it", async ({ page })
   await expect(h1).toHaveText("Pay for real work.");
   await expect(h1.locator("em")).toHaveText("real");
   await page.getByRole("link", { name: "Open round 1 of the first real campaign" }).click();
-  await expect(page).toHaveURL(new RegExp(`/c/${ROUND1}$`));
+  // A program that points at the campaign (the contributor spec makes one) takes over its public record at /p/<slug>.
+  await expect(page).toHaveURL(new RegExp(`/(c/${ROUND1}|p/[a-z0-9-]+)$`));
 });
 
 test("guardrails reads both latches live and shows the signer placeholder", async ({ page }) => {
@@ -90,7 +91,9 @@ test("relay refuses batches, unknown methods and big faucet requests", async ({ 
   expect((await (await rpc({ jsonrpc: "2.0", id: 1, method: "getBlockHeight", params: [{}] })).json()).result).toBeTruthy();
 });
 
-test("submitting without signing in is refused before anything is spent", async ({ request }) => {
-  const response = await request.post("/api/submit", { data: { campaign: ROUND1, postUrl: "https://x.com/KenilVekar1752/status/2113550979329368489" } });
-  expect(response.status()).toBe(401);
+test("the retired v1 submit and link endpoints are gone: the agent is the only path to an approval", async ({ request }) => {
+  const submit = await request.post("/api/submit", { data: { campaign: ROUND1, postUrl: "https://x.com/KenilVekar1752/status/2113550979329368489" } });
+  expect(submit.status()).toBe(410);
+  expect((await request.post("/api/link", { data: {} })).status()).toBe(410);
+  expect((await request.get("/api/session")).status()).toBe(404);
 });

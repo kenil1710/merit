@@ -88,7 +88,7 @@ export type RoundStatus = {
   round: number;
   startsAt: Date;
   endsAt: Date;
-  /** Whether /api/submit can take work now (the open round, or a closed one inside its grace for posts written in it). */
+  /** Whether a contributor can submit now (the open round, or a closed one inside its grace for posts written in it). */
   takesSubmissions: boolean;
   /** When the next round is expected to open (settlement starts after the grace, then takes a few steps); null when it waits on a person. */
   nextOpensAt: Date | null;

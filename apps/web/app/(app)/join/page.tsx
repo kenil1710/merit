@@ -1,46 +1,25 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { PageHeader, Section } from "@/components/ui-kit";
+import { EmptyState, PageHeader, Section } from "@/components/ui-kit";
 import { getDb } from "@/lib/db";
 import { perfectPayout, rlo } from "@/lib/program-math";
 import { joinablePrograms } from "@/lib/server/contributors";
-import { PageSkeleton } from "@/components/ui-kit/skeletons";
-import { namedCampaigns } from "@/lib/server/live-campaigns";
-import { JoinFlow } from "./JoinFlow";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Contribute" };
 
+// The directory of programs. Joining and submitting happen on each program's own page, /join/<slug>, so every
+// submission goes through the agent's eligibility, rules, duplicate and injection checks.
 export default async function JoinPage() {
-  const [{ campaigns }, programs] = await Promise.all([
-    namedCampaigns(),
-    getDb()
-      .then(joinablePrograms)
-      .catch(() => []),
-  ]);
-  // Every running campaign, open or between rounds: a campaign that is paying out says when its next round opens.
-  const live = campaigns
-    .filter(({ status }) => status.state !== "ended" && status.state !== "idle")
-    .map(({ state, meta, status }) => ({
-      address: state.address,
-      name: meta.name,
-      brief: meta.brief,
-      roundEndMs: Number(state.roundEndMs),
-      round: Number(state.round),
-      minScore: Number(state.minScore),
-      rateKelvin: state.rateKelvin.toString(),
-      state: status.state,
-      takesSubmissions: status.takesSubmissions,
-      nextOpensAtMs: status.nextOpensAt?.getTime() ?? null,
-      statusText: status.text,
-    }));
+  const programs = await getDb()
+    .then(joinablePrograms)
+    .catch(() => []);
   return (
     <div className="grid gap-8">
       <PageHeader
         title={<>Contribute and get <em>paid</em></>}
-        description="Sign in with X, keep a Rialo wallet in this browser, and submit a post. The judge scores it; if it passes, validators verify it and the round pays you automatically when it ends."
+        description="Pick a program, sign in with X and join with a Rialo wallet in this browser. Then submit a post: the agent judges it, validators verify it, and the round pays you automatically when it ends."
       />
       {programs.length ? (
         <Section title="Programs taking contributors" description="Open one to see what it pays for and join in two steps.">
@@ -59,10 +38,11 @@ export default async function JoinPage() {
             ))}
           </ul>
         </Section>
-      ) : null}
-      <Suspense fallback={<PageSkeleton stats={0} rows={4} />}>
-        <JoinFlow campaigns={live} />
-      </Suspense>
+      ) : (
+        <EmptyState art="link" title="No programs right now" action={{ label: "Explore past programs", href: "/explore" }}>
+          No program is taking contributors at the moment. Check back soon.
+        </EmptyState>
+      )}
     </div>
   );
 }

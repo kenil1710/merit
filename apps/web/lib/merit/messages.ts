@@ -6,10 +6,6 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { base58 } from "@scure/base";
 import { hex } from "./codec";
 
-export function linkMessage(xUserId: string, username: string, wallet: string, issuedAt: string): string {
-  return `Merit: link X account ${xUserId} (@${username}) to Rialo wallet ${wallet}. Issued ${issuedAt}.`;
-}
-
 export function campaignMessage(address: string, name: string, brief: string): string {
   const digest = hex(sha256(new TextEncoder().encode(`${name}\n${brief}`)));
   return `Merit: describe campaign ${address} as sha256 ${digest}.`;

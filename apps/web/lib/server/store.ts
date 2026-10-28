@@ -89,8 +89,8 @@ export const store = {
   saveJudgement: (postId: string, value: StoredJudgement) => write("judgements", postId, value),
   /** Only for a record that doesn't match the hash its ledger entry carries: the chain decides which record is right. */
   replaceJudgement: (postId: string, value: StoredJudgement) => write("judgements", postId, value, { overwrite: true }),
+  /** v1 wallet links, read-only: joining a program is the only way to name a payout wallet now. */
   link: (xUserId: string) => read<WalletLink>("links", xUserId),
-  saveLink: (value: WalletLink) => write("links", value.xUserId, value, { overwrite: true }),
   campaign: (address: string) => read<CampaignMeta>("campaigns", address),
   campaigns: () => list<CampaignMeta>("campaigns"),
   saveCampaign: (value: CampaignMeta) => write("campaigns", value.address, value),

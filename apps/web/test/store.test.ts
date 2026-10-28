@@ -35,11 +35,7 @@ describe("store (Postgres)", () => {
     expect((await store.campaigns()).map((c) => c.address).sort()).toEqual([CAMPAIGN, ROUND1].sort());
   });
 
-  it("wallet links overwrite; judgements are write-once", async () => {
-    const link = { xUserId: "42", username: "a", wallet: "W1", message: "m", signature: "s", linkedAt: "t" };
-    await store.saveLink(link);
-    await store.saveLink({ ...link, wallet: "W2" });
-    expect((await store.link("42"))?.wallet).toBe("W2");
+  it("judgements are write-once", async () => {
     const j = { campaign: CAMPAIGN, round: 1, canonical: "{}", submissionHash: "h", text: "t", judgedAt: "now", outcome: "approved" as const };
     await store.saveJudgement("7", j);
     await expect(store.saveJudgement("7", j)).rejects.toBeInstanceOf(RecordExists);
