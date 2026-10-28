@@ -46,8 +46,9 @@ Counts: **0 Critical (H-1 may be Critical once confirmed), 2 High, 5 Medium, 13 
 
 ## Fix status (2026-10-28)
 
-**Fixed:** H-1, H-2, M-1, M-2, M-4, M-5, L-2, L-3, L-4, L-5, L-9, L-10, L-12, L-13, I-1, I-3.
-**Fixed in part:** M-3, L-7, L-8, L-11 (docs).
+**Fixed:** H-1, H-2, M-2, M-4, M-5, L-2, L-3, L-4, L-5, L-9, L-12, L-13, I-1, I-3.
+**Fixed in part / less proven:** M-1 (skip paths not run on chain), M-3, L-7, L-8, L-10 (inline script), L-11 (docs).
+See `docs/REAUDIT.md` for the re-audit; its N-1 is fixed in program v4.
 **Won't fix now:** L-1, L-6, I-2, I-4 (reasons are under each finding).
 The program fixes are program v3, upgraded in place on DevNet and tested there (`deployments/devnet-v3-audit.json`).
 
@@ -141,7 +142,7 @@ On-chain caps still bound the loss to each round's caps.
 
 ### M-1 · Medium · On-chain program
 
-> **Status: Fixed (program v3). New owner instruction skip_stuck: after 10 minutes with no settlement step succeeding, it skips the failing step (reimbursement, or the next payout, recorded UNFUNDED) or ends a round whose ledger can't be read. refund also accepts a stuck SETTLING. A payout to an executable account is recorded UNFUNDED instead of failing. Tested on DevNet (accepted when stuck, rejected when open or progressing, rejected for a stranger). Not done: approve can't check the contributor account (it isn't passed); settle_pay handles it instead.**
+> **Status: Fixed in code (program v3, tightened in v4 after the re-audit's N-1). skip_stuck needs a resume and then 10 minutes with no settlement step, and never runs while verifications can land. refund also accepts a stuck SETTLING, and a payout to an executable account is recorded UNFUNDED. On DevNet: the rejections and the empty-ledger recovery. The payout, reimbursement, unreadable-ledger and executable-recipient branches are NOT run on chain; this is a README known limit.**
 **What:** No instruction gets a campaign out of `SETTLING` when a settlement step keeps failing. Any failing payout
 transfer therefore locks escrow and ops for good.
 
@@ -209,7 +210,7 @@ hold.
 
 ### M-3 · Medium · On-chain program / Trust model
 
-> **Status: Fixed in part (program v3) and documented. set_limits can't change the daily cap or approval threshold while a round is SETTLING, WAITING_FUNDS or AWAITING_APPROVAL (tested on DevNet). Won't fix: a round above the threshold can still be left unapproved until the refund deadline. That's the owner's approval power by design, now stated in the README and PROGRAM.md trust model.**
+> **Status: Fixed in part (program v3). The limits are frozen while a round settles, waits for funds or waits for approval (tested on DevNet). Not fixed: a change made while a round is OPEN (or just past its end, before the next beat) applies to that round. This is an owner power, listed in README Known limits; PROGRAM.md no longer says "between rounds".**
 **What:** The owner can hold back payouts for work that was already approved and verified, without anyone noticing.
 
 **Where:**
@@ -347,7 +348,7 @@ would be redirected. `request.json()` parses `text/plain`, so a simple cross-sit
 
 ### L-4 · Low · Web / Rate limits
 
-> **Status: Fixed (9705c2b). Every app rate limit counts in Neon (rate_hits), so all instances share one count. The daily cron prunes old counters.**
+> **Status: Fixed (Neon counters). Two side effects from the re-audit are known limits: shared caps count refused calls (N-2), and the relay depends on Neon (N-3).**
 **What:** All app rate limits live in memory, per serverless instance:
 - sign-in nonces
 - submit
@@ -452,7 +453,7 @@ computes **8** from the same 0.129 RLO budget.
 
 ### L-10 · Low · Web / Headers
 
-> **Status: Fixed (55b5e5d). Production sends a Content-Security-Policy (self-only scripts, styles and connect, 'unsafe-inline' for Next's bootstrap, 'wasm-unsafe-eval' for wallet crypto) and a Permissions-Policy. Owner go-live e2e passed under it on a production build. Not done: nonce-based script-src.**
+> **Status: Fixed in part. A CSP and Permissions-Policy are live, but script-src allows 'unsafe-inline' (README Known limits). Nonce-based script-src is not done.**
 **What:** There's no `Content-Security-Policy` (or `Permissions-Policy`). HSTS, `nosniff`, `X-Frame-Options: DENY`
 and `Referrer-Policy` are present.
 

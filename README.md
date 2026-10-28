@@ -41,10 +41,11 @@ Live on Rialo DevNet: **[merit-ruby-two.vercel.app](https://merit-ruby-two.verce
   unpaid entries, which withholds those payouts (it can't redirect them).
 - **The owner funds the campaign and can stop paying, but can't take what is owed without it showing.** The owner
   can pause (payouts wait), end the campaign, set the daily cap and a round-approval threshold, and withdraw escrow
-  that no open round reserves. Since program v3 those two limits can't change while a round settles, so a closed
-  round pays under the rules it closed with. A round above the threshold waits for `approve_round`; if the owner never
+  that no open round reserves. Those two limits can't change while a round settles, but a change takes effect
+  immediately otherwise (see Known limits). A round above the threshold waits for `approve_round`; if the owner never
   approves it, the refund deadline returns the escrow to the owner and the entries stay unpaid on chain. A stuck
-  payout skipped with `skip_stuck` is recorded `UNFUNDED` (verified, owed, unpaid). Reviewers the owner adds can
+  payout skipped with `skip_stuck` (only after a `resume` and 10 minutes with no progress) is recorded `UNFUNDED`
+  (verified, owed, unpaid). Reviewers the owner adds can
   approve any amount up to the per-payout cap from the review queue.
 - **REX proves facts about the post:** it exists, its author id, and that it was created inside the round. It can't
   prove the wallet belongs to that X account. That link comes from the X sign-in plus a wallet signature, and a
@@ -131,7 +132,25 @@ Everything below is on Rialo DevNet; [`docs/EVIDENCE.md`](docs/EVIDENCE.md) has 
 
 Security findings from this work were reported privately to the Rialo and Latch teams.
 
-## Honest limits and roadmap
+## Known limits and roadmap
+
+**Known limits (from the audit and re-audit, `docs/AUDIT.md`, `docs/REAUDIT.md`):**
+- **Owner limit changes apply at once (M-3).** The daily cap and approval threshold are frozen while a round settles,
+  but a change made while a round is open (or in the seconds after it ends, before the next beat) applies to that
+  round, whose verified entries are already in its ledger. That is an owner power; snapshotting the limits per round
+  is the fix.
+- **`skip_stuck`'s skip paths are untested on chain (M-1).** Its rejections and the empty-ledger recovery ran on
+  DevNet; skipping a payout or a reimbursement, the unreadable-ledger branch and the executable-recipient branch have
+  only unit-level coverage, because a real failing settlement step can't be produced on demand.
+- **The CSP allows inline script (L-10).** `script-src 'self' 'unsafe-inline'`: an injected inline script would still
+  run; fetches and images are limited to this site. Nonce-based `script-src` is the fix.
+- **Shared rate limits count refused calls (N-2).** "Read it" (150 a day for everyone) and the Guardrails probes
+  (60 a minute) can be used up by one client sending refused requests, which turns them off for everyone until the
+  window ends.
+- **The relay needs Neon (N-3).** Every wallet RPC call counts against a Neon rate limit first; if Neon is down the
+  relay answers 429 and the in-browser wallet can't read or send.
+- **Cron and balances (N-4, L-6).** The daily cron cleans tables before it retries submissions, so a failed cleanup
+  skips that day's retries. Nothing alerts on the agent's own DevNet balance, which pays payee rent and fees.
 
 **Limits today:**
 - **DevNet only, test RLO.**

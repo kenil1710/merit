@@ -656,3 +656,20 @@ D were ended and their escrow and budgets withdrawn to the test owner (C's inclu
 **After the upgrade:** the full local e2e suite passed 17/17 on DevNet, and the live `public.spec` passed 7/7
 against production.
 
+## Program v4: N-1 fix, upgraded and tested (2026-10-28)
+
+**Upgrade (commit `cae96a8`).** In place, 11:47:58–11:48:48 UTC, right after round 87 of `5LyX…` opened. 104
+program + 27 REX transactions, 0.0064 RLO (deployer 2.7237 → 2.7173). `resume` on 5LyX (`5FNi2qfu…`, epoch 91)
+restarted the heartbeat (beats 7 → 12 in 25 s). No layout or instruction change.
+
+| Case (v4, test campaign E `9pqQDbLV…`, 60 s rounds, one approval) | Result | Signature |
+| --- | --- | --- |
+| `skip_stuck` while settling, with no resume | rejected: "settlement is not stuck (resume first, then wait 10 minutes)" | `4tEHK5Xb…` |
+| owner `resume` while settling | accepted (epoch 2) | `2PT4e4eC…` |
+| `skip_stuck` right after that resume | rejected | `2C5ziwz8…` |
+| `refund` right after that resume | rejected | `3UsFk2XV…` |
+| after the resume, E settled round 1 (REX verdict in, entry skipped as unverified) and opened round 2 | passed | |
+
+The `approve_round` and `fund` paths reset the same marks; they need a REX-verified real post to reach on DevNet, so
+they are covered by `merit-core` unit tests (`n1_…`) only. Full signatures: `deployments/devnet-v3-audit.json`.
+

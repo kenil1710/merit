@@ -571,7 +571,131 @@
    "merit": [
     "Merit owner withdrew 20000000 kelvin of operations budget"
    ]
+  },
+  {
+   "case": "setup: create test campaign E (60 s rounds)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "47TYfQjxuwm7fag9RXbvQdw5z97D9FeYBFqaBukzqqEJcXsith4q8mcsaMzhXkifk1vQCGWXj3CZZzU59pw4B88r",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit campaign 9pqQDbLV889twCyPckmAt4GAJwP4Ng7tfTjxCFFHkcAr created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: fund E 0.02 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "17nqPbVyia65pSExMZcNyTMZdfbSyroKddNRaBKBGUnCBYHN3TfxnpuXrj5WpnMjMpSDvuzjvZ1dN2Nqer9QN1Z",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit escrow funded with 20000000 kelvin (escrow 20000000)"
+   ]
+  },
+  {
+   "case": "setup: fund E's operations budget 0.05 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "34RyUnzkjmq8CrGPV1Fx2WTNDZQ4rH6gR8gp7Rbiw7isXxb5ep57TYxBHUuqCYJNfD8YET2ocvupXcUSnMjZRbHZ",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit operations budget funded with 50000000 kelvin (budget 50000000, ~4 verifications)"
+   ]
+  },
+  {
+   "case": "setup: start E (round 1)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2v7rgfz7n6kEStZVCRKDXzTi3P2BudB5pTEycDmEnn97Pq83EsEttFfpMCiDFEEFmzmKSgVjCcaJF5KytgsA875Y",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit round 1 open until 1793188248627 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: agent opens E's round-1 ledger",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2nqacY5GECHCdHeo4Rk7wzRgjV518AJx4jQmfhG1ngeQAQAWgYr4dpwJDumje6CgVnTPNuGc7QrE9G6onFjdi9zH",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit ledger opened for campaign 9pqQDbLV889twCyPckmAt4GAJwP4Ng7tfTjxCFFHkcAr round 1"
+   ]
+  },
+  {
+   "case": "setup: approve a post on E (its REX check fails; settlement has an entry to wait on)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3kGNSwFxFzEUNvW26sHj7t9T6AMEcwSN7smuTKLZB5uhGayg55BQdbPGq4juqozPsmBfQubWt56jEM2nDZYMxoV1",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit approved post 1000000000000000088 by X user 88: score 100 -> 10000000 kelvin (entry 0)"
+   ]
+  },
+  {
+   "case": "N-1 v4: skip_stuck while settling, with no resume",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4tEHK5XbmMJ7KmtKUTfew7jtdFbgD2kpNK1APvAxULPD5WCXUwxhK6ewjBPGWWNXoCrKu3o8j5V7oL8B9rBvuE2B",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected skip_stuck: settlement is not stuck (resume first, then wait 10 minutes)"
+   ]
+  },
+  {
+   "case": "N-1 v4: owner resume while settling",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2PT4e4eCP1gsGbfPmvDXdbATLctiFuM8ChWMTFeZAoLDx7uy567n35X9rQaHkgryRPzh5RgWLpTx8gqCaJmoX9zm",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit heartbeat resumed (epoch 2)"
+   ]
+  },
+  {
+   "case": "N-1 v4: skip_stuck right after a resume (no 10 quiet minutes)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "2C5ziwz8LaYgztaU7kE5UwfkSazaHnDLaPJbTqg1PnjmgoFRCd6VkJHt7BaN6wdi4DBBu3p3VCdr5MVc367Ks2TJ",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected skip_stuck: settlement is not stuck (resume first, then wait 10 minutes)"
+   ]
+  },
+  {
+   "case": "N-1 v4: refund right after a resume (not stuck)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3UsFk2XVDbzfRCCNnp4ot5H7UAvw6752gYzJ8LsKMndorvPpQNz4JDUxdkkqaM4Jw3S9qL7NecMd3rh9TqkPWPmn",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": []
+  },
+  {
+   "case": "N-1 v4: after the resume, E settles round 1 (REX verdict in, entry skipped as unverified) and opens round 2",
+   "expect": "round 2",
+   "pass": true,
+   "round": "2",
+   "phase": "1"
   }
  ],
- "note": "Cases up to \"v2: H-1: owner refund\u2026\" ran on program v2 to confirm H-1. The rest ran on v3 after the in-place upgrade."
+ "note": "Cases up to \"v2: H-1: owner refund\u2026\" ran on program v2 to confirm H-1. The rest ran on v3 after the in-place upgrade.",
+ "campaignE": "9pqQDbLV889twCyPckmAt4GAJwP4Ng7tfTjxCFFHkcAr",
+ "upgradeV4": {
+  "at": "2026-10-28T11:47:58Z",
+  "commit": "cae96a8",
+  "costRlo": "0.00641016",
+  "venusTxs": 104,
+  "rexTxs": 27,
+  "resume5LyX": "5FNi2qfuLA3m2qpPMnnrECU77etEcEWkMZKfoJDqu1wxoffeDCPv5fGzH1wUp9ccNDApgXDGQQrufz88SYdf6CCW"
+ }
 }

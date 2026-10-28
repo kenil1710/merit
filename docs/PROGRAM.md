@@ -1,9 +1,9 @@
 # Merit Venus program (`programs/merit`)
 
-Status: **deployed on Rialo DevNet (program v3).** Program id
+Status: **deployed on Rialo DevNet (program v4).** Program id
 `4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6`, REX component `SufLA3Vvm5x7ag2RSctyJhgceMQS1ht8rYAadjdvQvb` (pinned in
 `require_authorized_rex`).
-- **Last in-place upgrade:** 2026-10-28, program v3 (audit fixes, below). Before that 2026-10-26 (`964ba6e`): the
+- **Last in-place upgrade:** 2026-10-28, program v4 (re-audit N-1), after v3 (audit fixes) the same day. Before that 2026-10-26 (`964ba6e`): the
   REX fetch sends `X-Merit-Campaign`.
 - **Negative tests:** the rejection paths are checked on DevNet (`docs/EVIDENCE.md`, "Negative tests";
   `apps/web/scripts/negative-devnet.ts`), including the audit's H-1, M-1, M-2 and M-3 cases on v3.
@@ -143,20 +143,32 @@ keep decoding and v3 was upgraded in place.
 | Finding | Change |
 | --- | --- |
 | H-1: pre-funding a ledger address froze settlement | An account at the ledger address with no data that the program doesn't own (`merit_core::ledger_absent`) reads as "no approvals"; `open_ledger` and `open_payee` assign a pre-funded, empty, system-owned PDA to the program before Venus writes it (Venus's `create_account` fails on an address that holds kelvin). |
-| M-1: no way out of a stuck `SETTLING` | `skip_stuck(ledger)` (owner): after `STUCK_MS` (10 min) with no settlement step succeeding, it skips the step that keeps failing (the agent's reimbursement, or the next payout, recorded `UNFUNDED`), or ends the round with nothing paid if its ledger can't be read, then re-arms settlement. `refund` also accepts a stuck `SETTLING`. A payout to an executable account is recorded `UNFUNDED` instead of failing. While settling, `last_beat_ms` is the time of the last step that succeeded. |
+| M-1: no way out of a stuck `SETTLING` | `skip_stuck(ledger)` (owner): after a `resume` and then `STUCK_MS` (10 min) with no settlement step succeeding (v4), it skips the step that keeps failing (the agent's reimbursement, or the next payout, recorded `UNFUNDED`), or ends the round with nothing paid if its ledger can't be read, then re-arms settlement. `refund` also accepts a stuck `SETTLING`. A payout to an executable account is recorded `UNFUNDED` instead of failing. While settling, `last_beat_ms` is the time of the last step that succeeded. |
 | M-2: a post could verify in two rounds after `close_round` | `approve` and `retry_verify` sync the ledger's round end to the campaign's (`synced_round_end`). |
 | M-3: limits changed after a round closed | `set_limits` can't change `max_per_day` or `approval_threshold` while the campaign is `SETTLING`, `WAITING_FUNDS` or `AWAITING_APPROVAL` (`limits_change_allowed`); cooldown and grace still can. |
 | L-7: pause didn't stop a scheduled payout | `settle_pay` pays nothing while paused (before the deadline); `settle_peek` waits. |
 
 **Owner powers, stated plainly.** The owner can pause (payouts wait), end, withdraw escrow no open round reserves,
-and set the daily cap and the round-approval threshold between rounds. A round above the threshold waits for
+and change the daily cap and the round-approval threshold at any time except while a round is settling, waiting for
+funds or waiting for approval. A change takes effect immediately, including for a round that is still open (or just
+past its end, before the next beat) whose verified entries already sit in its ledger. A round above the threshold waits for
 `approve_round`; if the owner never approves it, the deadline refund returns the escrow and the round's entries stay
-unpaid (`TODO`) on chain. `skip_stuck` records the skipped payout as `UNFUNDED`.
+unpaid (`TODO`) on chain. `skip_stuck` records the skipped payout as `UNFUNDED`;
+since v4 it needs a `resume` first and 10 minutes with no settlement step after it, and never runs while REX
+verifications can still land.
 
 **Still open:** a `refund` from `WAITING_FUNDS`, `AWAITING_APPROVAL` or a stuck `SETTLING` doesn't mark verified
 entries `UNFUNDED` (it has no ledger account to read), so they stay `TODO`.
 
-## Instruction tags (bincode u32 LE prefix, programs v2 and v3)
+## Program v4 (2026-10-28, re-audit N-1)
+
+v3 let the owner call `skip_stuck` right after `approve_round` or `fund` (they re-entered `SETTLING` with an old
+"last progress" time), and skip a payout that would have succeeded. v4: `resume` during settlement records its time
+(in the campaign's otherwise unused `payee_since_ms`) and counts as progress; `approve_round` and `fund` count as
+progress and clear that mark; `open_round` clears it. `skip_stuck` and the stuck-`refund` path need a resume and then
+10 minutes with no step, and `skip_stuck` refuses while verifications can still land. No layout or instruction change.
+
+## Instruction tags (bincode u32 LE prefix, programs v2–v4)
 
 From `wit/merit-manifest.json`; every tag moved in v2; v3 only added `skip_stuck` (28).
 
