@@ -540,12 +540,25 @@ fn h1_a_prefunded_ledger_address_reads_as_no_ledger() {
 }
 
 #[test]
-fn m1_settlement_is_stuck_only_after_stuck_ms_without_progress() {
-    assert!(!settlement_stuck(phase::SETTLING, NOW, NOW + STUCK_MS - 1));
-    assert!(settlement_stuck(phase::SETTLING, NOW, NOW + STUCK_MS));
+fn m1_settlement_is_stuck_only_after_a_resume_and_stuck_ms_without_progress() {
+    let resumed = NOW + 1_000;
+    assert!(!settlement_stuck(phase::SETTLING, NOW, 0, NOW + 10 * STUCK_MS), "never without a resume");
+    assert!(!settlement_stuck(phase::SETTLING, NOW, resumed, resumed + STUCK_MS - 1));
+    assert!(settlement_stuck(phase::SETTLING, NOW, resumed, resumed + STUCK_MS));
+    // A step that succeeded after the resume restarts the wait.
+    assert!(!settlement_stuck(phase::SETTLING, resumed + 500, resumed, resumed + STUCK_MS));
+    assert!(settlement_stuck(phase::SETTLING, resumed + 500, resumed, resumed + 500 + STUCK_MS));
     for p in [phase::IDLE, phase::OPEN, phase::WAITING_FUNDS, phase::ENDED, phase::REFUNDED, phase::AWAITING_APPROVAL] {
-        assert!(!settlement_stuck(p, NOW, NOW + 10 * STUCK_MS), "phase {p}");
+        assert!(!settlement_stuck(p, NOW, resumed, NOW + 10 * STUCK_MS), "phase {p}");
     }
+}
+
+#[test]
+fn n1_approve_round_or_fund_reset_both_marks_so_skip_is_not_open() {
+    // approve_round / fund set last progress to now and clear the resume mark.
+    let now = NOW + 3_600_000;
+    assert!(!settlement_stuck(phase::SETTLING, now, 0, now + 1));
+    assert!(!settlement_stuck(phase::SETTLING, now, 0, now + 10 * STUCK_MS));
 }
 
 #[test]

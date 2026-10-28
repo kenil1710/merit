@@ -253,6 +253,7 @@ rialo! {
                 msg!("Merit escrow funded with {} kelvin (escrow {})", amount_kelvin, self.escrow_kelvin);
                 if self.phase == rules::phase::WAITING_FUNDS {
                     self.phase = rules::phase::SETTLING;
+                    self.mark_progress()?;
                     self.timer_epoch = self.timer_epoch.saturating_add(1);
                     let ledger = self.round_ledger_address();
                     let epoch = self.timer_epoch;
@@ -361,7 +362,7 @@ rialo! {
                     || self.phase == rules::phase::ENDED
                     || self.phase == rules::phase::WAITING_FUNDS
                     || self.phase == rules::phase::AWAITING_APPROVAL
-                    || rules::settlement_stuck(self.phase, self.last_beat_ms, now);
+                    || rules::settlement_stuck(self.phase, self.last_beat_ms, self.resumed_ms(), now);
                 if now < self.refund_deadline_ms || !refundable {
                     return Err(ProgramError::InvalidArgument);
                 }
@@ -375,6 +376,12 @@ rialo! {
                 self.timer_epoch = self.timer_epoch.saturating_add(1);
                 let epoch = self.timer_epoch;
                 let target = self.after_ms(rules::SETTLE_STEP_MS)?;
+                if self.phase == rules::phase::SETTLING {
+                    // v4 (re-audit N-1): skip_stuck counts from here.
+                    let now = self.now_ms()?;
+                    self.last_beat_ms = now;
+                    self.payee_since_ms = now;
+                }
                 if self.phase == rules::phase::OPEN {
                     AFTER target CALL [beat epoch: epoch];
                 } else if self.phase == rules::phase::SETTLING {
@@ -1016,6 +1023,7 @@ rialo! {
                 }
                 self.round_approved = true;
                 self.phase = rules::phase::SETTLING;
+                self.mark_progress()?;
                 self.timer_epoch = self.timer_epoch.saturating_add(1);
                 let ledger = self.round_ledger_address();
                 let epoch = self.timer_epoch;
@@ -1129,8 +1137,10 @@ rialo! {
                 let ledger_account = self.account(&ledger)?;
                 self.require_campaign_owner()?;
                 let now = self.now_ms()?;
-                if !rules::settlement_stuck(self.phase, self.last_beat_ms, now) || ledger != self.round_ledger_address() {
-                    msg!("Merit rejected skip_stuck: settlement is not stuck");
+                if !rules::settlement_stuck(self.phase, self.last_beat_ms, self.resumed_ms(), now)
+                    || ledger != self.round_ledger_address()
+                {
+                    msg!("Merit rejected skip_stuck: settlement is not stuck (resume first, then wait 10 minutes)");
                     return Err(ProgramError::InvalidArgument);
                 }
                 self.timer_epoch = self.timer_epoch.saturating_add(1);
@@ -1139,6 +1149,14 @@ rialo! {
                 let target = now.saturating_add(rules::SETTLE_STEP_MS);
                 match self.load_ledger(&ledger_account) {
                     Ok((entries, _, count)) => {
+                        // v4 (re-audit N-1): never while REX verifications can still land.
+                        let closed = now
+                            >= self.round_end_ms.saturating_add(self.grace_ms()).saturating_add(rules::VERIFY_GRACE_MS)
+                            || now >= self.refund_deadline_ms;
+                        if !rules::verification_done(&entries, count, closed) {
+                            msg!("Merit rejected skip_stuck: verifications are still pending");
+                            return Err(ProgramError::InvalidArgument);
+                        }
                         if count > 0 && !self.round_reimbursed {
                             self.round_reimbursed = true;
                             msg!("Merit owner skipped round {}'s agent reimbursement", self.round);
@@ -1179,6 +1197,21 @@ rialo! {
             // ---------------------------------------------------------------
             // Helpers
             // ---------------------------------------------------------------
+
+            // v4 (re-audit N-1). A campaign never uses the payee fields, so
+            // `payee_since_ms` holds the time of the owner's last `resume` during
+            // this settlement (0 = none); open_round, approve_round and fund clear it.
+            fn resumed_ms(&self) -> u64 {
+                if self.kind == rules::kind::CAMPAIGN { self.payee_since_ms } else { 0 }
+            }
+
+            // Settlement re-entered by the owner (approve_round, fund): progress
+            // now, and no resume yet.
+            fn mark_progress(&mut self) -> ProgramResult {
+                self.last_beat_ms = self.now_ms()?;
+                self.payee_since_ms = 0;
+                Ok(())
+            }
 
             // v3 (audit M-2): see rules::synced_round_end.
             fn sync_round_window(&mut self, parent: &State) {
@@ -1230,6 +1263,7 @@ rialo! {
                 self.round_reimbursed = false;
                 self.round_approved = false;
                 self.beats = 0;
+                self.payee_since_ms = 0;
                 for state in self.outcome.iter_mut() {
                     *state = rules::settle::TODO;
                 }

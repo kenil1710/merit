@@ -12,6 +12,7 @@
 //   h1-check reads C again (phase, last settlement transactions)
 //   v3       program v3 (audit H-1, M-1, M-2, M-3) on test campaign D (60 s rounds) and the stuck C:
 //            pre-funded ledger addresses, skip_stuck, the ledger window after close_round, set_limits while settling
+//   v4       program v4 (re-audit N-1) on test campaign E: skip_stuck needs a resume and 10 quiet minutes after it
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -35,7 +36,7 @@ const keystore = (alias: string) => {
 };
 const owner = keystore("merit-contributor-demo");
 const agent = keystore("merit-agent-devnet");
-type State = { stranger: string; slugA: string; slugB: string; slugC?: string; slugD?: string; cases: unknown[] };
+type State = { stranger: string; slugA: string; slugB: string; slugC?: string; slugD?: string; slugE?: string; cases: unknown[] };
 const state: State = existsSync(statePath!)
   ? (JSON.parse(readFileSync(statePath!, "utf8")) as State)
   : { stranger: base58.encode(crypto.getRandomValues(new Uint8Array(32))), slugA: hex(randomSlug()), slugB: hex(randomSlug()), cases: [] };
@@ -436,6 +437,50 @@ async function v3Stuck() {
   save();
 }
 
+/**
+ * Program v4 (re-audit N-1). E: 60 s rounds, an approval in round 1 so settlement has work. While E settles,
+ * skip_stuck without a resume is refused; after a resume it is refused for 10 minutes; refund too. The resume itself
+ * must leave settlement healthy (E reaches round 2), and settle_peek's progress keeps it from ever reading as stuck.
+ */
+async function v4() {
+  state.slugE ??= hex(randomSlug());
+  save();
+  const slugE = unhex(state.slugE);
+  const E = workflowAddress(O, nonce(slugE));
+  console.log(JSON.stringify({ campaignE: E }));
+  await airdrop(owner, RLO, RLO / 5n);
+  const small = RLO / 100n;
+  await step("setup: create test campaign E (60 s rounds)", owner, ix.createCampaign(O, slugE, { agent: A_, rateKelvin: small, minScore: 50n, capPerPayout: small, capPerContributor: small, capPerRound: small, roundLengthMs: 60_000n, refundDeadlineMs: BigInt(Date.now() + 2 * 86_400_000) }), "accepted");
+  await step("setup: fund E 0.02 RLO", owner, ix.fund(O, slugE, small * 2n), "accepted");
+  await step("setup: fund E's operations budget 0.05 RLO", owner, ix.fundOps(O, slugE, small * 5n), "accepted");
+  await step("setup: start E (round 1)", owner, ix.start(O, slugE), "accepted");
+  const token = await encryptedXToken();
+  await step("setup: agent opens E's round-1 ledger", agent, ix.openLedger(A_, ledgerSlug(E, 1n), E, 1n, token), "accepted");
+  await step("setup: approve a post on E (its REX check fails; settlement has an entry to wait on)", agent, ix.approve(A_, ledgerSlug(E, 1n), { campaign: E, contributor: wallet(), xUserId: 88n, postId: post(88), score: 100n, submissionHash: fakeHash(), payee: payeeAddress(A_, E, 88n) }), "accepted");
+  const L1 = ledgerAddress(A_, E, 1n);
+  const settling = await until(E, 120_000, (c) => c.phase === 2n).catch(() => null);
+  if (!settling) return console.log(JSON.stringify({ case: "N-1 on E", skipped: "E never read as settling" }));
+  await step("N-1 v4: skip_stuck while settling, with no resume", owner, ix.skipStuck(O, slugE, L1), "rejected");
+  await step("N-1 v4: owner resume while settling", owner, ix.resume(O, slugE), "accepted");
+  await step("N-1 v4: skip_stuck right after a resume (no 10 quiet minutes)", owner, ix.skipStuck(O, slugE, L1), "rejected");
+  await step("N-1 v4: refund right after a resume (not stuck)", owner, ix.refund(O, slugE), "rejected");
+  const r2 = await until(E, 300_000, (c) => c.round >= 2n).catch(() => null);
+  const line = { case: "N-1 v4: after the resume, E settles round 1 (REX verdict in, entry skipped as unverified) and opens round 2", expect: "round 2", pass: !!r2, round: String(r2?.round), phase: String(r2?.phase) };
+  console.log(JSON.stringify(line));
+  state.cases.push(line);
+  save();
+}
+
+async function v4Cleanup() {
+  const slugE = unhex(state.slugE!);
+  const E = workflowAddress(O, nonce(slugE));
+  let e = (await loadState(rpc, E))!;
+  if (e.phase !== 4n && e.phase !== 5n && !e.ending) await step("cleanup: end E", owner, ix.end(O, slugE), "accepted");
+  e = await until(E, 300_000, (c) => c.phase === 4n || c.phase === 0n || c.phase === 5n);
+  if (e.escrowKelvin > 0n) await step("cleanup: withdraw E's escrow", owner, ix.withdraw(O, slugE, e.escrowKelvin), "accepted");
+  if (e.opsBudgetKelvin > 0n) await step("cleanup: withdraw E's operations budget", owner, ix.withdrawOps(O, slugE, e.opsBudgetKelvin), "accepted");
+}
+
 /** Ends D and returns its funds once it can. */
 async function v3Cleanup() {
   const slugD = unhex(state.slugD!);
@@ -467,6 +512,8 @@ else if (mode === "h1-owner") await h1Owner();
 else if (mode === "v3") await v3();
 else if (mode === "v3-stuck") await v3Stuck();
 else if (mode === "v3-cleanup") await v3Cleanup();
+else if (mode === "v4") await v4();
+else if (mode === "v4-cleanup") await v4Cleanup();
 else if (mode === "h1-cleanup") await h1Cleanup();
 else if (mode === "cleanup") await cleanup();
 else if (mode === "forge") await forge();

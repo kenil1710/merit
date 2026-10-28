@@ -750,10 +750,16 @@ pub fn ledger_absent(data_len: usize, kelvins: u64, owned_by_program: bool) -> b
     data_len == 0 && (kelvins == 0 || !owned_by_program)
 }
 
-/// Program v3 (audit M-1). Settlement is stuck when the campaign has been
-/// settling with no successful step for `STUCK_MS`.
-pub fn settlement_stuck(phase_now: u64, last_progress_ms: u64, now_ms: u64) -> bool {
-    phase_now == phase::SETTLING && now_ms >= last_progress_ms.saturating_add(STUCK_MS)
+/// Program v3 (audit M-1), tightened in v4 (re-audit N-1). Settlement is
+/// stuck only when the owner has tried `resume` during this settlement
+/// (`resumed_ms`, 0 when not) and no step has succeeded for `STUCK_MS` since
+/// the later of that resume and the last step that did. `approve_round` and
+/// `fund` reset both, so neither opens a window to skip a payout that would
+/// have succeeded.
+pub fn settlement_stuck(phase_now: u64, last_progress_ms: u64, resumed_ms: u64, now_ms: u64) -> bool {
+    phase_now == phase::SETTLING
+        && resumed_ms > 0
+        && now_ms >= last_progress_ms.max(resumed_ms).saturating_add(STUCK_MS)
 }
 
 /// Program v3 (audit M-2). A ledger keeps its own copy of the round window. If
