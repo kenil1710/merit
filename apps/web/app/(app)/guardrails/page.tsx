@@ -1,5 +1,6 @@
 import { KeyRound, ShieldCheck, Timer } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CampaignUsageTable } from "@/components/guardrails/campaign-usage";
 import { ChildLatches, type ChildLatchView } from "@/components/guardrails/child-latches";
 import { FilterList } from "@/components/guardrails/filter-list";
@@ -119,7 +120,11 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
             <span className="font-mono">{readAt.toISOString().slice(11, 19)} UTC</span> ·{" "}
             <a href={window === "7d" ? "/guardrails?window=7d" : "/guardrails"} className="text-foreground underline underline-offset-4">
               Refresh
-            </a>
+            </a>{" "}
+            · How the code was reviewed:{" "}
+            <Link href="/security" className="text-foreground underline underline-offset-4">
+              Security
+            </Link>
           </>
         }
       />
@@ -242,7 +247,7 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
           </div>
         </Card>
       </div>
-      <ChildLatches today={today} week={week}>{children}</ChildLatches>
+      <ChildLatches readAt={readAt}>{children}</ChildLatches>
       {usage ? <CampaignUsageTable usage={usage} window={window} readAt={readAt} /> : <Notice tone="warning">Per-campaign usage needs the database, which isn&apos;t reachable right now.</Notice>}
     </div>
   );

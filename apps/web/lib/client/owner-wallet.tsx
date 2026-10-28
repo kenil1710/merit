@@ -1,24 +1,26 @@
 "use client";
 
 // The owner's unlocked wallet, kept in memory for the /app session: unlock once (at sign-in) and every page in the
-// owner app can sign until a reload or Lock. The encrypted key itself stays in localStorage (see wallet.ts).
+// owner app can sign until a reload or Lock. It is the tab's one unlocked key (wallet.ts), so the wallet panel and
+// the owner app always agree. The encrypted key itself stays in localStorage.
 
 import type { Keypair } from "@rialo/ts-cdk";
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { signMessage } from "./wallet";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { getUnlocked, setUnlocked, signMessage, subscribeUnlocked } from "./wallet";
 import { ownerSignInMessage, OWNER_NETWORK } from "@/lib/merit/messages";
 
-const Ctx = createContext<{ keypair: Keypair | null; setKeypair: (k: Keypair | null) => void } | null>(null);
-
+/** Kept so the owner layout reads the same; the key lives in wallet.ts's in-memory store. */
 export function OwnerWalletProvider({ children }: { children: ReactNode }) {
-  const [keypair, setKeypair] = useState<Keypair | null>(null);
-  return <Ctx.Provider value={{ keypair, setKeypair }}>{children}</Ctx.Provider>;
+  return <>{children}</>;
+}
+
+/** The unlocked keypair in this tab (null when locked), and a setter that every wallet view follows. */
+export function useUnlockedWallet(): Keypair | null {
+  return useSyncExternalStore(subscribeUnlocked, getUnlocked, () => null);
 }
 
 export function useOwnerWallet() {
-  const value = useContext(Ctx);
-  if (!value) throw new Error("useOwnerWallet outside OwnerWalletProvider");
-  return value;
+  return { keypair: useUnlockedWallet(), setKeypair: setUnlocked };
 }
 
 async function post<T>(url: string, body: unknown): Promise<T> {

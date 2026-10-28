@@ -225,7 +225,7 @@ export function GoLive({ program, onLive }: { program: GoLiveProgram; onLive?: (
               <span className="mono-num font-medium">{balance === null ? "…" : rlo(balance)}</span>
               <span className="text-muted-foreground"> · needs about {rlo(planned + RENT_ALLOWANCE)}</span>
             </span>
-            <FaucetButton keypair={keypair} size="sm" disabled={running} onFunded={balanceAfterFaucet} />
+            <FaucetButton address={keypair.publicKey.toString()} size="sm" disabled={running} onFunded={balanceAfterFaucet} />
           </div>
           {short ? <Notice tone="warning">The wallet holds less than the escrow and operations budget you planned. Use the faucet first.</Notice> : null}
           <Button size="lg" className="h-11 w-fit px-5 text-[15px]" disabled={running || short} onClick={run}>

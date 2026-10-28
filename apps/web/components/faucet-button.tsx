@@ -1,6 +1,6 @@
 "use client";
 
-import type { Keypair } from "@rialo/ts-cdk";
+import { PublicKey } from "@rialo/ts-cdk";
 import { base58 } from "@scure/base";
 import { Droplets } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -24,8 +24,8 @@ export function nextFaucetText(nextAt: string | null, now = Date.now()): string 
  * "Get 1 DevNet RLO", with the relay's limits shown before the click: once per wallet per day, a few per network
  * per day, and not for a wallet that already holds 1 RLO.
  */
-export function FaucetButton({ keypair, disabled, onFunded, size = "default" }: { keypair: Keypair; disabled?: boolean; onFunded: () => Promise<void> | void; size?: "sm" | "default" }) {
-  const wallet = keypair.publicKey.toString();
+export function FaucetButton({ address: wallet, disabled, onFunded, size = "default" }: { address: string; disabled?: boolean; onFunded: () => Promise<void> | void; size?: "sm" | "default" }) {
+  const [, tick] = useState(0);
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
@@ -39,6 +39,15 @@ export function FaucetButton({ keypair, disabled, onFunded, size = "default" }: 
   useEffect(() => {
     void load();
   }, [load]);
+  // The cooldown note counts down live; when it runs out, ask the server again.
+  useEffect(() => {
+    if (!status?.nextAt) return;
+    const timer = setInterval(() => {
+      if (Date.parse(status.nextAt!) <= Date.now()) void load();
+      else tick((n) => n + 1);
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [status?.nextAt, load]);
 
   const blocked = status && !status.ok;
   const note = blocked ? (status.reason === "balance" ? "Holds 1 RLO already" : nextFaucetText(status.nextAt) ?? status.message) : "1 RLO per wallet per day";
@@ -54,7 +63,7 @@ export function FaucetButton({ keypair, disabled, onFunded, size = "default" }: 
           try {
             // DevNet can take well over the SDK's default few seconds to run an airdrop: wait up to a minute.
             const client = relayClient();
-            const signature = await client.requestAirdrop(keypair.publicKey, FAUCET_MAX_KELVIN);
+            const signature = await client.requestAirdrop(PublicKey.fromString(wallet), FAUCET_MAX_KELVIN);
             await client.confirmTransaction(base58.encode(signature), { maxRetries: 60, retryDelayMs: 1000 });
             await onFunded();
             toast.success("1 DevNet RLO received");

@@ -1,15 +1,17 @@
 "use client";
 
-import { Compass, Menu, PenLine, Rocket, ShieldCheck, Wallet } from "lucide-react";
+import { Compass, FileCheck2, Menu, PenLine, Rocket, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
 import { shortHex } from "@/components/hex-value";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { savedAddress } from "@/lib/client/wallet";
+import { useUnlockedWallet } from "@/lib/client/owner-wallet";
+import { useSavedAddress } from "@/lib/client/use-wallet";
+import { openWalletPanel } from "@/lib/client/wallet";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,6 +72,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <NavItem href="/join" icon={PenLine} label="Contribute" path={path} onNavigate={onNavigate} also={CONTRIBUTOR_PATH} />
         <NavItem href="/app" icon={Rocket} label="Run a campaign" path={path} onNavigate={onNavigate} also="/owner" />
         <NavItem href="/guardrails" icon={ShieldCheck} label="Guardrails" path={path} onNavigate={onNavigate} />
+        <NavItem href="/security" icon={FileCheck2} label="Security" path={path} onNavigate={onNavigate} />
       </nav>
 
       <div className="grid gap-1.5 px-3">
@@ -89,26 +92,24 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/** The wallet in this browser; opens the wallet panel (create, unlock, faucet, backup, forget). */
 function WalletChip() {
-  const [address, setAddress] = useState<string | null>(null);
-  useEffect(() => {
-    const sync = () => setAddress(savedAddress());
-    sync();
-    window.addEventListener("merit-wallet", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("merit-wallet", sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
+  const address = useSavedAddress();
+  const unlocked = useUnlockedWallet()?.publicKey.toString() === address && address !== null;
   return (
-    <div className="bg-card shadow-soft flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm">
+    <button
+      type="button"
+      onClick={openWalletPanel}
+      className="bg-card shadow-soft hover:bg-card/80 focus-visible:ring-ring/50 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm outline-none focus-visible:ring-3"
+      data-testid="wallet-chip"
+      aria-label="Open wallet"
+    >
       <Wallet className="text-brand size-4 shrink-0" strokeWidth={1.5} />
-      <div className="min-w-0">
-        <p className="text-muted-foreground text-xs">Wallet in this browser</p>
-        <p className="truncate font-mono text-[13px]">{address ? shortHex(address) : "None yet"}</p>
-      </div>
-    </div>
+      <span className="min-w-0 flex-1">
+        <span className="text-muted-foreground block text-xs">{address ? (unlocked ? "Wallet · unlocked" : "Wallet · locked") : "Wallet in this browser"}</span>
+        <span className="block truncate font-mono text-[13px]">{address ? shortHex(address) : "Create one"}</span>
+      </span>
+    </button>
   );
 }
 

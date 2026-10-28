@@ -7,7 +7,8 @@ import { CampaignControls } from "@/components/app/campaign-controls";
 import { ProgramStatus } from "@/components/app/program-status";
 import { SetupChecklist } from "@/components/app/setup-checklist";
 import { HexValue } from "@/components/hex-value";
-import { phaseStatus, StatusBadge } from "@/components/status-badge";
+import { WalletStrip } from "@/components/wallet/wallet-strip";
+import { RoundBadge } from "@/components/status-badge";
 import { Card, Notice, PageHeader } from "@/components/ui-kit";
 import { getDb } from "@/lib/db";
 import { formatRlo } from "@/lib/merit/constants";
@@ -17,7 +18,7 @@ import { controlsState, programSummary } from "@/lib/server/program-summary";
 import { getProgramForMember, listMembers } from "@/lib/server/programs";
 import { getOwnerSession } from "@/lib/server/session";
 import { minutesLabel } from "@/lib/when";
-import { isEndedPhase } from "@/lib/shared/round-window";
+import { isEndedPhase, roundStatus } from "@/lib/shared/round-window";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -51,7 +52,7 @@ export default async function ProgramOverview({ params }: Props) {
         meta={
           <span className="inline-flex flex-wrap items-center gap-2">
             <ProgramStatus status={p.status} ended={!!p.endedAt || isEndedPhase(state?.phase ?? 0n)} />
-            {state ? <StatusBadge status={phaseStatus(Number(state.phase))} /> : null}
+            {state ? <RoundBadge state={roundStatus(state).state} owner /> : null}
             <span className="text-muted-foreground font-mono text-xs">/join/{p.slug}</span>
             {role === "reviewer" ? <span className="text-muted-foreground text-xs">· you review this program</span> : null}
           </span>
@@ -67,11 +68,12 @@ export default async function ProgramOverview({ params }: Props) {
 
       {s.chainError ? <Notice tone="warning">Rialo DevNet didn&apos;t answer just now; on-chain numbers are missing below.</Notice> : null}
       <SetupChecklist state={s.setup} href={`${base}/setup`} />
+      <WalletStrip />
 
       <section aria-label="At a glance" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Escrow" value={state ? formatRlo(state.escrowKelvin, 3) : "—"} unit="RLO" />
         <Tile label="Paid" value={state ? formatRlo(state.totalPaid, 3) : "—"} unit="RLO" success />
-        <Tile label="Round" value={state ? state.round.toString() : "—"} unit={s.roundPill?.split(" · ")[1]} />
+        <Tile label="Round" value={state ? state.round.toString() : "—"} unit={s.roundPill?.label} />
         <Tile
           label={
             <span className="inline-flex items-center gap-1.5">

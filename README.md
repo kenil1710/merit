@@ -134,7 +134,9 @@ Security findings from this work were reported privately to the Rialo and Latch 
 
 ## Known limits and roadmap
 
-**Known limits (from the audit and re-audit, `docs/AUDIT.md`, `docs/REAUDIT.md`):**
+**Known limits (from the audit and re-audit, `docs/AUDIT.md`, `docs/REAUDIT.md`; summarised on the site's
+[Security page](https://merit-ruby-two.vercel.app/security). Both were AI-assisted code reviews in fresh sessions, not a
+professional third-party audit):**
 - **Owner limit changes apply at once (M-3).** The daily cap and approval threshold are frozen while a round settles,
   but a change made while a round is open (or in the seconds after it ends, before the next beat) applies to that
   round, whose verified entries are already in its ledger. That is an owner power; snapshotting the limits per round

@@ -69,9 +69,17 @@ export function SiteFooter() {
           <Mark className="text-brand size-4" />
           Program <span className="font-mono">{PROGRAM_ID.slice(0, 8)}…</span> on Rialo DevNet · Latch governs every API credential.
         </span>
-        <a className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" href={PAPER_URL} target="_blank" rel="noreferrer">
-          Reactive Transactions: A Model for Native Automation on Rialo
-        </a>
+        <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" href="/security">
+            Security
+          </Link>
+          <Link className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" href="/guardrails">
+            Guardrails
+          </Link>
+          <a className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline" href={PAPER_URL} target="_blank" rel="noreferrer">
+            Reactive Transactions: A Model for Native Automation on Rialo
+          </a>
+        </span>
       </div>
     </footer>
   );

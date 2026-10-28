@@ -56,7 +56,7 @@ export default async function RoundsPage({ params }: { params: Promise<{ id: str
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <RoundStatusPill status={r.status} />
+                    <RoundStatusPill status={r.status} owner />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {utc(r.startsAt)} → {utc(r.endsAt)}

@@ -49,7 +49,7 @@ export type CampaignView = {
   books: { escrow: string; funded: string; paid: string; withdrawn: string; refunded: string; ops: string; opsFunded: string; opsReimbursed: string; accountKelvin: string };
   round: { number: number; startMs: number; endMs: number; beats: number; lastBeatMs: number; paidKelvin: string };
   /** The round clock as /join and Explore read it (`roundStatus`). */
-  status: { state: RoundState; text: string; takesSubmissions: boolean; nextOpensAtMs: number | null };
+  status: { state: RoundState; label: string; text: string; takesSubmissions: boolean; nextOpensAtMs: number | null; countdown: { toMs: number; prefix: string } | null };
   rounds: RoundView[];
   /** Rounds numbered below this can't pay any more (work still waiting for a person from them has expired). */
   expiredBelow: number;
@@ -193,7 +193,14 @@ export async function campaignView(address: string, { repair = false }: { repair
       number: Number(state.round), startMs: Number(state.roundStartMs), endMs: Number(state.roundEndMs),
       beats: Number(state.beats), lastBeatMs: Number(state.lastBeatMs), paidKelvin: s(state.roundPaidKelvin),
     },
-    status: (({ state: st, text, takesSubmissions, nextOpensAt }) => ({ state: st, text, takesSubmissions, nextOpensAtMs: nextOpensAt?.getTime() ?? null }))(roundStatus(state)),
+    status: (({ state: st, label, text, takesSubmissions, nextOpensAt, countdown }) => ({
+      state: st,
+      label,
+      text,
+      takesSubmissions,
+      nextOpensAtMs: nextOpensAt?.getTime() ?? null,
+      countdown: countdown ? { toMs: countdown.to.getTime(), prefix: countdown.prefix } : null,
+    }))(roundStatus(state)),
     rounds,
     expiredBelow: expiredBelow(state)!,
     activity,

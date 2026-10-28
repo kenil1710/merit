@@ -56,6 +56,7 @@ test("join page shows the minimums before sign-in, then joins with a wallet; a b
   await shot(page, "join-below-minimum");
 
   await page.getByLabel("Choose a passphrase for a new wallet").fill("merit-e2e-contributor");
+  await page.getByLabel("Confirm passphrase").fill("merit-e2e-contributor");
   await page.getByRole("button", { name: "Create wallet and join" }).click();
   await expect(page).toHaveURL(new RegExp(`/c/${slug}$`), { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: /Your contributions/ })).toBeVisible();

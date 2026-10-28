@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JoinWallet } from "@/components/contributor/join-wallet";
 import { Stepper } from "@/components/ui-kit/stepper";
+import { WalletStrip } from "@/components/wallet/wallet-strip";
+import { lineOf, RoundLine } from "@/components/rounds/round-line";
 import { Button } from "@/components/ui/button";
 import { getDb, schema } from "@/lib/db";
 import { loadState } from "@/lib/merit/chain";
@@ -24,8 +26,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const program = await publicProgram(await getDb(), (await params).slug);
   return program ? { title: `Join ${program.name}`, description: program.description } : {};
 }
-
-const utc = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
 /** A program's join page (Misthos' layout): what it pays for, the rules (minimums shown before sign-in), how it works, and joining in two steps. */
 export default async function JoinProgramPage({ params, searchParams }: Props) {
@@ -51,7 +51,6 @@ export default async function JoinProgramPage({ params, searchParams }: Props) {
   const ruleText = minimumRuleText(program);
   const ended = !!program.endedAt || isEndedPhase(state?.phase ?? 0n);
   const status = state ? roundStatus(state) : null;
-  const open = status?.state === "open";
   const best = program.rubricJson.categories.reduce((m, c) => (perfectPayout(c.maxPoints, program.ratePerPoint) > m ? perfectPayout(c.maxPoints, program.ratePerPoint) : m), 0n);
   const first = program.rubricJson.categories[0];
 
@@ -63,9 +62,8 @@ export default async function JoinProgramPage({ params, searchParams }: Props) {
         <p className="text-soft mt-4 max-w-[60ch] text-[17px] leading-relaxed">{program.description}</p>
         <ul className="mt-6 flex flex-wrap gap-2 text-sm" aria-label="At a glance">
           {state && state.round > 0n ? (
-            <li className="bg-card shadow-soft inline-flex items-center gap-2 rounded-full px-3.5 py-1.5" data-testid="join-round">
-              <span aria-hidden="true" className={`size-2 rounded-full ${open ? "bg-success" : "bg-muted-foreground/50"}`} />
-              {open ? `Round ${state.round} is open until ${utc(Number(state.roundEndMs))}` : ended ? "Campaign ended" : status!.text}
+            <li className="contents" data-testid="join-round">
+              <RoundLine status={lineOf(status!)} />
             </li>
           ) : null}
           <li className="bg-card shadow-soft rounded-full px-3.5 py-1.5">
@@ -76,6 +74,7 @@ export default async function JoinProgramPage({ params, searchParams }: Props) {
             Paid in test RLO on Rialo DevNet
           </li>
         </ul>
+        <WalletStrip className="mt-6" />
 
         {context ? (
           <section aria-labelledby="about-h" className="mt-14">

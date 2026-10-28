@@ -5,7 +5,7 @@ const ROUND1 = "G1JjiebaNvYQVBN4tscddqdKRZLfjJR2pgTVrBScx2TN";
 test("campaign page shows round 1's real decision end to end", async ({ page }) => {
   await page.goto(`/c/${ROUND1}`);
   // A program on this campaign moves its record to /p/<slug> (other specs in this server create mirrors of it).
-  await expect(page.getByRole("heading", { level: 1, name: /Explain Rialo in one post|Rialo in your own words/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Explain Rialo in one post|Rialo in your own words/ })).toBeVisible({ timeout: 30_000 });
   const row = page.getByTestId("decision-row").first();
   await expect(row.getByText("@KenilVekar1752")).toBeVisible();
   await expect(row.getByText("REX 4/4")).toBeVisible();

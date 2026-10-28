@@ -37,28 +37,37 @@ const clock = (o: Partial<Parameters<typeof roundStatus>[0]> = {}) => ({
 describe("round status: /join and Explore read the chain the same way", () => {
   it("an open round takes submissions until it ends", () => {
     const s = roundStatus(clock(), T0 + 10 * MIN);
-    expect(s).toMatchObject({ state: "open", takesSubmissions: true, nextOpensAt: null });
-    expect(s.text).toBe("Round 80 is open until 08:42 UTC");
+    expect(s).toMatchObject({ state: "open", label: "Open", takesSubmissions: true, nextOpensAt: null });
+    expect(s.text).toBe("Round 80 · Open until 08:42 UTC");
+    expect(s.countdown).toMatchObject({ prefix: "closes in" });
+    expect(s.countdown?.to.toISOString()).toBe(s.endsAt.toISOString());
   });
 
-  it("between rounds (Settling) is not 'no round': it says when the next one opens", () => {
+  it("between rounds is the Grace period, then Settling: it says when the next one opens", () => {
     // The tester's case: the chain had flipped to Settling during the 5-minute grace.
     const s = roundStatus(clock({ phase: 2n }), T0 + 31 * MIN);
-    expect(s.state).toBe("closing");
+    expect(s).toMatchObject({ state: "grace", label: "Grace period" });
     expect(s.takesSubmissions).toBe(true); // late work for round 80, inside the grace
     expect(s.nextOpensAt?.toISOString()).toBe("2026-10-28T08:48:29.412Z"); // end + grace + a minute of settle steps
-    expect(s.text).toBe("Round 80 closed at 08:42 UTC and pays out next. Round 81 opens at about 08:48 UTC");
+    expect(s.text).toBe("Round 80 · Grace period until 08:47 UTC: posts written before 08:42 UTC are still taken. Round 81 opens at about 08:48 UTC");
+    expect(s.countdown?.prefix).toBe("grace ends in");
     // Phase still Open on chain but past the end (the last heartbeat hasn't fired yet) reads the same.
-    expect(roundStatus(clock(), T0 + 31 * MIN).state).toBe("closing");
+    expect(roundStatus(clock(), T0 + 31 * MIN).state).toBe("grace");
   });
 
-  it("after the grace it is paying out; a long stall promises no time", () => {
+  it("after the grace it is Settling; a long stall promises no time", () => {
     const paying = roundStatus(clock({ phase: 2n }), T0 + 36 * MIN);
-    expect(paying).toMatchObject({ state: "paying", takesSubmissions: false });
+    expect(paying).toMatchObject({ state: "settling", label: "Settling", takesSubmissions: false });
     expect(paying.nextOpensAt).not.toBeNull();
+    expect(paying.countdown?.prefix).toBe("next round in");
     const stalled = roundStatus(clock({ phase: 2n }), T0 + 60 * MIN);
     expect(stalled.nextOpensAt).toBeNull();
-    expect(stalled.text).toMatch(/still settling \(it was due by 08:48 UTC\)/);
+    expect(stalled.countdown).toBeNull();
+    expect(stalled.text).toMatch(/Settling \(it was due by 08:48 UTC\)/);
+  });
+
+  it("with no grace configured a closed round goes straight to Settling", () => {
+    expect(roundStatus(clock({ phase: 2n, submitGraceMs: 0n }), T0 + 31 * MIN)).toMatchObject({ state: "settling", takesSubmissions: false });
   });
 
   it("states that wait on a person, and the end", () => {

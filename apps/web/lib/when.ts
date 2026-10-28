@@ -48,6 +48,21 @@ export function shortFromNow(d: Date, now: number = Date.now()): string {
   return "now";
 }
 
+/** A live countdown, to the second under a day: "2d 4h", "1h 05m 09s", "4m 05s", "12s", "now". */
+export function countdownText(ms: number): string {
+  if (ms <= 0) return "now";
+  const total = Math.ceil(ms / 1000);
+  const days = Math.floor(total / 86_400);
+  const hours = Math.floor((total % 86_400) / 3_600);
+  const mins = Math.floor((total % 3_600) / 60);
+  const secs = total % 60;
+  const p = (n: number) => String(n).padStart(2, "0");
+  if (days > 0) return hours ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return `${hours}h ${p(mins)}m ${p(secs)}s`;
+  if (mins > 0) return `${mins}m ${p(secs)}s`;
+  return `${secs}s`;
+}
+
 /** "5 minutes", "2 hours", "7 days". */
 export function minutesLabel(minutes: number): string {
   const [n, unit] = minutes % 1440 === 0 ? [minutes / 1440, "day"] : minutes % 60 === 0 ? [minutes / 60, "hour"] : [minutes, "minute"];

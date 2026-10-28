@@ -2,12 +2,14 @@
 
 import { KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { shortHex } from "@/components/hex-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createWallet, errorAfterEdit, savedAddress, signMessage, unlockWallet } from "@/lib/client/wallet";
+import { NewPassphraseFields } from "@/components/wallet/passphrase-fields";
+import { useSavedAddress } from "@/lib/client/use-wallet";
+import { createWallet, errorAfterEdit, newPassphraseError, signMessage, unlockWallet } from "@/lib/client/wallet";
 
 /**
  * Join with the Rialo wallet in this browser: unlock it (or create one), sign the join message naming your X account
@@ -15,18 +17,20 @@ import { createWallet, errorAfterEdit, savedAddress, signMessage, unlockWallet }
  */
 export function JoinWallet({ slug }: { slug: string }) {
   const router = useRouter();
-  const [address, setAddress] = useState<string | null>(null);
+  const address = useSavedAddress();
   const [passphrase, setPassphrase] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => setAddress(savedAddress()), []);
 
   async function join(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const invalid = address ? null : newPassphraseError(passphrase, confirm);
+    if (invalid) return setError(invalid);
     try {
       setBusy(address ? "Unlocking…" : "Creating wallet…");
-      const keypair = address ? await unlockWallet(passphrase) : await createWallet(passphrase);
+      const keypair = address ? await unlockWallet(passphrase) : await createWallet(passphrase, confirm);
       const wallet = keypair.publicKey.toString();
       setBusy("Signing…");
       const post = async (url: string, body: unknown) => {
@@ -53,22 +57,39 @@ export function JoinWallet({ slug }: { slug: string }) {
           <span className="font-mono text-[13px]">{shortHex(address, 10, 8)}</span>
         </p>
       ) : null}
-      <div className="grid gap-1.5">
-        <Label htmlFor="join-passphrase">{address ? "Passphrase" : "Choose a passphrase for a new wallet"}</Label>
-        <Input
+      {address ? (
+        <div className="grid gap-1.5">
+          <Label htmlFor="join-passphrase">Passphrase</Label>
+          <Input
+            id="join-passphrase"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Passphrase to unlock"
+            value={passphrase}
+            onChange={(e) => {
+              setPassphrase(e.target.value);
+              setError((err) => errorAfterEdit(err, e.target.value, false));
+            }}
+            className="h-10"
+          />
+        </div>
+      ) : (
+        <NewPassphraseFields
           id="join-passphrase"
-          type="password"
-          autoComplete={address ? "current-password" : "new-password"}
-          placeholder={address ? "Passphrase to unlock" : "8+ characters"}
+          label="Choose a passphrase for a new wallet"
           value={passphrase}
-          onChange={(e) => {
-            setPassphrase(e.target.value);
-            setError((err) => errorAfterEdit(err, e.target.value, !address));
+          confirm={confirm}
+          onChange={(v) => {
+            setPassphrase(v);
+            setError(null);
           }}
-          className="h-10"
+          onConfirmChange={(v) => {
+            setConfirm(v);
+            setError(null);
+          }}
         />
-      </div>
-      <Button type="submit" className="h-10 w-full" disabled={!passphrase || !!busy}>
+      )}
+      <Button type="submit" className="h-10 w-full" disabled={!passphrase || (!address && !confirm) || !!busy}>
         <KeyRound className="size-4" />
         {busy ?? (address ? "Sign and join" : "Create wallet and join")}
       </Button>

@@ -11,6 +11,7 @@ import { GoLive } from "@/components/app/go-live";
 import { DevNetBadge } from "@/components/app/owner-shell";
 import { VaultArt } from "@/components/brand/illustrations";
 import { Button } from "@/components/ui/button";
+import { WalletStrip } from "@/components/wallet/wallet-strip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -510,6 +511,7 @@ export function ProgramWizard({ owner, host }: { owner: string; host: string }) 
                 </button>
               </p>
             ) : null}
+            <WalletStrip className="mt-6" />
 
             <div className="mt-8 grid gap-6" onBlur={onFieldBlur}>
               {step === 0 ? (

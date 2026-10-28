@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { DecisionRounds } from "@/components/campaign/decisions";
 import { HexValue } from "@/components/hex-value";
 import { KelvinText } from "@/components/kelvin-text";
-import { phaseStatus, StatusBadge } from "@/components/status-badge";
+import { RoundLine } from "@/components/rounds/round-line";
 import { Card, PageHeader, Section, Stat } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { formatRlo, verificationsLeft } from "@/lib/merit/constants";
@@ -50,10 +50,12 @@ export function CampaignRecord({ view, joinHref = "/join", roundBase, extra }: {
       <PageHeader
         crumbs={[{ label: "Explore", href: "/explore" }, { label: view.meta?.name ?? "Campaign" }]}
         title={view.meta?.name ?? "Unnamed campaign"}
-        meta={<StatusBadge status={phaseStatus(view.phaseCode)} />}
+        meta={
+          <RoundLine status={view.status} />
+        }
         description={view.meta?.brief}
         actions={
-          view.status.state === "open" || view.status.state === "closing" || view.status.state === "paying" ? (
+          view.status.state === "open" || view.status.state === "grace" || view.status.state === "settling" ? (
             <Button asChild>
               <Link href={joinHref}>
                 Contribute <ArrowRight className="size-3.5" />

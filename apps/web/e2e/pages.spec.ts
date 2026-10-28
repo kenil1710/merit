@@ -68,7 +68,7 @@ test("owner pages: contributors, rounds, treasury, audit, settings, metrics; pub
   await page.goto(`${base}/rounds`);
   const rounds = page.getByTestId("rounds");
   await expect(rounds.getByRole("row", { name: /Round 1/ })).toContainText("0.0580 RLO", { timeout: 60_000 });
-  await expect(rounds.getByRole("row", { name: /Round 1/ })).toContainText("Settled");
+  await expect(rounds.getByRole("row", { name: /Round 1/ })).toContainText("Closed");
   await shot(page, "pages-rounds");
   await rounds.getByRole("link", { name: "Round 1" }).click();
   await expect(page.getByRole("heading", { name: "Round 1", level: 1 })).toBeVisible({ timeout: 60_000 });

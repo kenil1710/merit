@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { EmptyState, PageHeader, Section } from "@/components/ui-kit";
+import { WalletStrip } from "@/components/wallet/wallet-strip";
 import { getDb } from "@/lib/db";
 import { perfectPayout, rlo } from "@/lib/program-math";
 import { joinablePrograms } from "@/lib/server/contributors";
@@ -21,6 +22,10 @@ export default async function JoinPage() {
         title={<>Contribute and get <em>paid</em></>}
         description="Pick a program, sign in with X and join with a Rialo wallet in this browser. Then submit a post: the agent judges it, validators verify it, and the round pays you automatically when it ends."
       />
+      <section aria-label="Your wallet" className="grid gap-2">
+        <WalletStrip />
+        <p className="text-muted-foreground px-1 text-xs">Payouts go to this wallet. You can create it here or while joining a program; it never leaves this browser.</p>
+      </section>
       {programs.length ? (
         <Section title="Programs taking contributors" description="Open one to see what it pays for and join in two steps.">
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-testid="joinable">

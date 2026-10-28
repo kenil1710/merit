@@ -31,7 +31,7 @@ export default async function RoundPage({ params }: { params: Promise<{ id: stri
       <PageHeader
         crumbs={[{ label: program.name, href: base }, { label: "Rounds", href: `${base}/rounds` }, { label: `Round ${number}` }]}
         title={`Round ${number}`}
-        meta={<RoundStatusPill status={row.status} />}
+        meta={<RoundStatusPill status={row.status} owner />}
         description={`${utc(row.startsAt)} → ${utc(row.endsAt)}`}
         actions={
           <Link href={`/p/${program.slug}/rounds/${number}`} className="text-soft hover:text-foreground inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline">

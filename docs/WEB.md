@@ -17,11 +17,15 @@ Status: **deployed** on Vercel as project `merit` (`https://merit-ruby-two.verce
 | `/app/*` | Owner app: wizard, go-live, submissions and review queue, contributors, rounds, treasury, audit log, settings, metrics | Neon + chain, owner wallet sign-in |
 | `/owner` | The original campaign console (create, fund, open, end, withdraw, resume, refund) | browser-signed transactions via the relay |
 | `/guardrails` | `merit-judge` and `merit-x` capabilities, budget, audit and "try a bad request" probes, read live | `/.well-known/latch-self/*` |
+| `/security` | How Merit was checked: the two AI-assisted reviews (not a third-party audit), the 30 on-chain negative tests, every finding's status, the known limits | static, links to `docs/` on GitHub |
 
 ## Trust boundaries
 
 - **Browser**
   - The embedded wallet is a CDK `Keypair`, encrypted with the user's passphrase (PBKDF2-SHA256, 310k rounds, then AES-GCM) and kept in `localStorage`. The secret key never leaves the browser.
+  - The wallet panel (any sidebar wallet chip, or "Manage wallet" on the wallet strip of /join, the owner overview and the wizard) shows the address, balance and faucet cooldown, and can download the encrypted vault as a backup file, import one (the passphrase must open it; it never replaces a different stored wallet) and forget the wallet (type FORGET, backup offered first).
+  - The unlocked key lives in memory only, one per tab, shared by the wallet panel and the owner app. Lock clears it and ends the owner's signed session, so signing needs the passphrase again, also after a reload.
+  - A new passphrase needs 8+ characters and a matching confirmation; a strength hint nudges toward 12+ characters or four words.
   - Owner instructions are signed in the browser.
   - Joining a program signs an off-chain message naming the X account and the payout wallet (single-use nonce); there is no transaction.
   - A Content-Security-Policy keeps scripts, styles and every fetch on this site.
@@ -87,6 +91,10 @@ npx playwright test                  # e2e on real DevNet (isolated server on :3
   - the retired v1 `/api/submit` and `/api/link` answer 410.
 - **`e2e/owner-app.spec.ts`, `contributor.spec.ts`, `review.spec.ts`, `pages.spec.ts`:** the owner wizard and go-live
   on DevNet, joining and submitting, the review queue, and every app page.
+- **`e2e/wallet.spec.ts`:** the wallet panel end to end (create with confirm and strength, backup, forget, import), Lock
+  really locking the owner app across a reload, the Security page, and Explore's shared labels and ticking countdowns.
+- **`e2e/live.spec.ts`** (only with `MERIT_E2E_URL`): the faucet's once-per-wallet-per-day cooldown and "Read it"
+  answering within 20 seconds, on the deployed site.
 - **`test/audit-fixes.test.ts`:** the audit fixes on the web side (sign-in return path, Neon rate limits, typed cookies,
   housekeeping).
 

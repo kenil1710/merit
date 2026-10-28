@@ -4,10 +4,9 @@ import { findLedger, loadState } from "@/lib/merit/chain";
 import { verificationsLeft as opsVerificationsLeft } from "@/lib/merit/constants";
 import type { MeritState } from "@/lib/merit/state";
 import { setupCurrent, type SetupState } from "@/lib/setup-flow";
-import { shortFromNow } from "@/lib/when";
 import { getDb } from "@/lib/db";
 import { rpc } from "./agent";
-import { expiredBelow } from "@/lib/shared/round-window";
+import { expiredBelow, roundBadgeText, roundStatus } from "@/lib/shared/round-window";
 import { reviewCount } from "./review";
 import type { Program } from "./programs";
 import { store } from "./store";
@@ -23,7 +22,7 @@ export type ProgramSummary = {
   /** The chain couldn't be read (DevNet down): show what the database knows, and say so. */
   chainError: boolean;
   setup: SetupState;
-  roundPill: string | null;
+  roundPill: RoundPillData | null;
   needs: Need[];
   verificationsLeft: number | null;
   /** Submissions waiting for a person (escalated, second looks, waiting for funds). */
@@ -52,29 +51,20 @@ export function setupState(program: Program, state: MeritState | null, described
   };
 }
 
-/** "Round 2 · closes in 3m", "Round 2 · paying", "Ended"; null before the campaign exists. */
-export function roundPill(state: MeritState | null, program: Program, now = Date.now()): string | null {
+/** The owner's round pill: "Round 2 · Open" plus a live countdown, with the shared labels; null before the campaign exists. */
+export type RoundPillData = { text: string; label: string; tone: "live" | "wait" | "idle"; countdown: { toMs: number; prefix: string } | null };
+
+export function roundPill(state: MeritState | null, program: Program, now = Date.now()): RoundPillData | null {
   if (!state) return null;
-  const n = state.round.toString();
-  switch (Number(state.phase)) {
-    case 0:
-      return state.round === 0n
-        ? program.firstRoundStartsAt.getTime() > now
-          ? `Round 1 · opens in ${shortFromNow(program.firstRoundStartsAt, now)}`
-          : "Round 1 · not open yet"
-        : `Round ${n} done · next not open`;
-    case 1:
-      if (state.paused) return `Round ${n} · paused`;
-      return `Round ${n} · closes in ${shortFromNow(new Date(Number(state.roundEndMs)), now)}`;
-    case 2:
-      return `Round ${n} · paying`;
-    case 3:
-      return `Round ${n} · waiting for funds`;
-    case 6:
-      return `Round ${n} · waiting for your approval`;
-    default:
-      return "Ended";
+  if (state.phase === 0n && state.round === 0n) {
+    const later = program.firstRoundStartsAt.getTime() > now;
+    return { text: "Round 1", label: "Not started", tone: "idle", countdown: later ? { toMs: program.firstRoundStartsAt.getTime(), prefix: "opens in" } : null };
   }
+  const status = roundStatus(state, now);
+  const label = roundBadgeText(status.state, true);
+  const tone = status.state === "open" ? "live" : status.state === "ended" || status.state === "idle" ? "idle" : "wait";
+  const countdown = status.countdown ? { toMs: status.countdown.to.getTime(), prefix: status.countdown.prefix } : null;
+  return { text: status.state === "ended" ? "Ended" : `Round ${status.round} · ${label}`, label, tone, countdown };
 }
 
 export function verificationsLeft(state: MeritState): number {

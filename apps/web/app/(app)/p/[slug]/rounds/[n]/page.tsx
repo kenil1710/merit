@@ -80,7 +80,7 @@ export default async function RoundReceipt({ params }: Params) {
             ))}
           </ul>
         ) : (
-          <EmptyState className="py-8">{current && row.status !== "settled" ? "Payouts happen when this round settles." : "No payouts in this round."}</EmptyState>
+          <EmptyState className="py-8">{current && row.status !== "closed" ? "Payouts happen when this round settles." : "No payouts in this round."}</EmptyState>
         )}
       </Section>
     </div>

@@ -3,7 +3,7 @@ import "server-only";
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { audit, schema, type Db } from "@/lib/db";
 import { rolling } from "@/lib/shared/day-cap";
-import { effectiveGraceMs } from "@/lib/shared/round-window";
+import { roundStatus, type RoundClock, type RoundState } from "@/lib/shared/round-window";
 import type { MeritState } from "@/lib/merit/state";
 import { rpc } from "./agent";
 import type { CampaignView, DecisionView } from "./campaign-view";
@@ -102,7 +102,8 @@ export async function setContributorStatus(db: Db, p: { programId: string; contr
 
 // ─── Rounds ─────────────────────────────────────────────────────────────────
 
-export type RoundStatus = "open" | "grace" | "settling" | "waiting_funds" | "awaiting_owner" | "paused" | "settled";
+/** A round row's status: the current round's live state (`roundStatus`), or "closed" for every earlier round. */
+export type RoundStatus = RoundState | "closed";
 
 export type RoundRow = {
   number: number;
@@ -116,22 +117,8 @@ export type RoundRow = {
   ledger: string | null;
 };
 
-export function currentRoundStatus(state: Pick<MeritState, "phase" | "paused" | "roundEndMs" | "submitGraceMs" | "roundLengthMs">, now = Date.now()): RoundStatus {
-  if (state.paused && state.phase < 4n) return "paused";
-  const end = Number(state.roundEndMs);
-  const inGrace = now >= end && now < end + effectiveGraceMs(state);
-  switch (Number(state.phase)) {
-    case 1:
-      return now < end ? "open" : inGrace ? "grace" : "settling";
-    case 2:
-      return inGrace ? "grace" : "settling";
-    case 3:
-      return "waiting_funds";
-    case 6:
-      return "awaiting_owner";
-    default:
-      return "settled";
-  }
+export function currentRoundStatus(state: RoundClock, now = Date.now()): RoundStatus {
+  return roundStatus(state, now).state;
 }
 
 export async function roundRows(db: Db, programId: string, view: CampaignView | null, state: MeritState | null): Promise<RoundRow[]> {
@@ -159,7 +146,7 @@ export async function roundRows(db: Db, programId: string, view: CampaignView | 
         number,
         startsAt: isCurrent ? new Date(Number(state.roundStartMs)).toISOString() : (local?.startsAt.toISOString() ?? null),
         endsAt: isCurrent ? new Date(Number(state.roundEndMs)).toISOString() : (local?.endsAt.toISOString() ?? null),
-        status: isCurrent ? currentRoundStatus(state) : "settled",
+        status: isCurrent ? currentRoundStatus(state) : "closed",
         submissions: Number(counts.find((c) => c.round === number)?.n ?? 0),
         approved: decisions.length,
         paid: paid.toString(),

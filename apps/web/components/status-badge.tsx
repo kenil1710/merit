@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { roundBadgeText, type RoundState } from "@/lib/shared/round-window";
 import { cn } from "@/lib/utils";
 
 /** What a decision or campaign can show. Green is reserved for verified and paid. */
@@ -11,6 +12,7 @@ export type BadgeStatus =
   | "waiting_funds"
   | "skipped"
   | "open"
+  | "grace"
   | "settling"
   | "idle"
   | "ended"
@@ -29,6 +31,7 @@ const styles: Record<BadgeStatus, string> = {
   waiting_funds: "bg-warning-subtle text-warning",
   skipped: "bg-muted text-muted-foreground",
   open: "bg-brand-subtle text-brand-soft",
+  grace: "bg-warning-subtle text-warning",
   settling: "bg-warning-subtle text-warning",
   idle: "bg-muted text-muted-foreground",
   ended: "bg-muted text-muted-foreground",
@@ -47,7 +50,8 @@ const labels: Record<BadgeStatus, string> = {
   paid: "Paid",
   waiting_funds: "Waiting for funds",
   skipped: "Skipped",
-  open: "Round open",
+  open: "Open",
+  grace: "Grace period",
   settling: "Settling",
   idle: "Idle",
   ended: "Ended",
@@ -63,12 +67,17 @@ export function phaseStatus(phase: number): BadgeStatus {
   return (["idle", "open", "settling", "waiting_funds", "ended", "refunded", "awaiting_owner"] as const)[phase] ?? "idle";
 }
 
-/** A campaign's round status (`roundStatus`) to a badge: a round past its end shows Settling even before the chain flips the phase. */
-export function roundBadge(state: string): BadgeStatus {
-  if (state === "open") return "open";
-  if (state === "closing" || state === "paying") return "settling";
-  if (state === "waiting_funds" || state === "awaiting_owner" || state === "ended" || state === "idle") return state;
+/** A round state (`roundStatus`) to a badge tone: a round past its end shows Grace period or Settling even before the chain flips the phase. */
+export function roundBadge(state: RoundState | "closed"): BadgeStatus {
+  if (state === "open" || state === "grace") return state;
+  if (state === "settling" || state === "waiting_funds" || state === "awaiting_owner") return "settling";
+  if (state === "ended" || state === "closed") return "ended";
   return "idle";
+}
+
+/** A round's status with the shared labels (Open / Grace period / Settling / Closed), on every page. */
+export function RoundBadge({ state, owner = false, className }: { state: RoundState | "closed"; owner?: boolean; className?: string }) {
+  return <StatusBadge status={roundBadge(state)} label={state === "ended" ? "Ended" : roundBadgeText(state, owner)} className={className} />;
 }
 
 /** Ledger entry status text (ENTRY_STATUS_NAMES) to a badge. */
@@ -81,7 +90,7 @@ export function entryStatus(status: string, paid: boolean): BadgeStatus {
   return "failed";
 }
 
-export function StatusBadge({ status, className }: { status: BadgeStatus; className?: string }) {
+export function StatusBadge({ status, label, className }: { status: BadgeStatus; label?: string; className?: string }) {
   return (
     <span
       className={cn(
@@ -91,7 +100,7 @@ export function StatusBadge({ status, className }: { status: BadgeStatus; classN
       )}
     >
       {status === "paid" || status === "verified" ? <Check className="size-3" aria-hidden="true" /> : null}
-      {labels[status]}
+      {label ?? labels[status]}
     </span>
   );
 }

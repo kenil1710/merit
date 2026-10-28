@@ -7,6 +7,7 @@ import { expect, test } from "@playwright/test";
 test("owner creates, funds, opens, ends and withdraws a campaign from the browser", async ({ page }) => {
   await page.goto("/owner");
   await page.getByPlaceholder("New passphrase (8+ characters)").fill("merit-e2e-passphrase");
+  await page.getByLabel("Confirm passphrase").fill("merit-e2e-passphrase");
   await page.getByRole("button", { name: "Create wallet" }).click();
   await expect(page.getByRole("button", { name: "Get 1 DevNet RLO" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Get 1 DevNet RLO" }).click();
@@ -33,7 +34,7 @@ test("owner creates, funds, opens, ends and withdraws a campaign from the browse
   await expect(log.locator(".text-danger")).toHaveCount(0);
   await expect(log.getByText(/Merit round 1 open until/)).toBeVisible();
 
-  const card = page.locator("section", { has: page.getByText("Round open") }).last();
+  const card = page.locator("section", { has: page.getByText("Open", { exact: true }) }).last();
   await expect(card.getByText(/verifications left/)).toBeVisible({ timeout: 30_000 });
   await page.screenshot({ path: "../../docs/screenshots/owner-dashboard.png", fullPage: true });
   await card.getByRole("button", { name: "End campaign" }).click();

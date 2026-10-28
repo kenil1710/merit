@@ -25,6 +25,7 @@ test("owner signs in, creates a program in the wizard and takes it live on Rialo
   await expect(page.getByRole("heading", { name: "Sign in to Merit" })).toBeVisible();
   await shot(page, "app-sign-in");
   await page.getByLabel("Choose a passphrase").fill(PASS);
+  await page.getByLabel("Confirm passphrase").fill(PASS);
   await page.getByRole("button", { name: "Create wallet and sign in" }).click();
   await expect(page.getByTestId("welcome")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("account-chip")).toContainText("Owner");
@@ -86,7 +87,11 @@ test("owner signs in, creates a program in the wizard and takes it live on Rialo
   // The owner shell: program overview with its round pill, then all programs.
   await page.getByRole("link", { name: "Go to the program" }).click();
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId("round-pill").first()).toContainText(/Round 1 · closes in/);
+  await expect(page.getByTestId("round-pill").first()).toContainText(/Round 1 · Open · closes in \d+m \d\ds/);
+  // The countdown ticks every second instead of reading "closes in 3m" for three minutes.
+  const pillBefore = await page.getByTestId("round-pill").first().textContent();
+  await page.waitForTimeout(2_200);
+  expect(await page.getByTestId("round-pill").first().textContent()).not.toBe(pillBefore);
   await expect(page.getByTestId("setup-checklist")).toHaveCount(0);
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
   await shot(page, "app-program-overview");

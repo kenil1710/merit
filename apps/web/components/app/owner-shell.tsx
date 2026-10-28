@@ -11,8 +11,6 @@ import {
   Landmark,
   Layers,
   LayoutDashboard,
-  Lock,
-  LogOut,
   Menu,
   PenLine,
   Plus,
@@ -24,9 +22,10 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Wordmark } from "@/components/brand/wordmark";
+import { Countdown } from "@/components/countdown";
 import { shortHex } from "@/components/hex-value";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -40,7 +39,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useOwnerWallet } from "@/lib/client/owner-wallet";
+import { openWalletPanel } from "@/lib/client/wallet";
 import { accountRole } from "@/lib/shared/account-role";
+import type { RoundPillData } from "@/lib/server/program-summary";
 import { cn } from "@/lib/utils";
 import { isFocusRoute } from "./focus-frame";
 
@@ -53,8 +54,8 @@ export interface ShellProgram {
   role: "owner" | "reviewer";
   /** Submissions waiting for a person. */
   review: number;
-  /** "Round 1 · closes in 4m", or null before the campaign exists. */
-  roundPill: string | null;
+  /** "Round 1 · Open" and its live countdown, or null before the campaign exists. */
+  roundPill: RoundPillData | null;
   needs: { text: string; href: string; action: string; kind: string }[];
 }
 
@@ -229,41 +230,27 @@ function ProgramSwitcher({ programs, current, onNavigate }: { programs: ShellPro
   );
 }
 
-/** The signed-in wallet with its role, Lock (when unlocked on this page) and Sign out. */
+/** The signed-in wallet with its role; opens the wallet panel (balance, faucet, Lock and sign out, backup, forget). */
 function AccountChip({ address, role }: { address: string; role: "Owner" | "Reviewer" }) {
-  const router = useRouter();
-  const { keypair, setKeypair } = useOwnerWallet();
+  const { keypair } = useOwnerWallet();
+  const unlocked = keypair?.publicKey.toString() === address;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="bg-card shadow-soft hover:bg-card/80 focus-visible:ring-ring/50 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm outline-none focus-visible:ring-3" data-testid="account-chip">
-        <Wallet className="text-brand size-4 shrink-0" strokeWidth={1.5} />
-        <span className="min-w-0 flex-1">
-          <span className="text-muted-foreground block text-xs" data-testid="account-role">
-            {role}
-          </span>
-          <span className="block truncate font-mono text-[13px]">{shortHex(address)}</span>
+    <button
+      type="button"
+      onClick={openWalletPanel}
+      className="bg-card shadow-soft hover:bg-card/80 focus-visible:ring-ring/50 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm outline-none focus-visible:ring-3"
+      data-testid="account-chip"
+      aria-label="Open wallet"
+    >
+      <Wallet className="text-brand size-4 shrink-0" strokeWidth={1.5} />
+      <span className="min-w-0 flex-1">
+        <span className="text-muted-foreground block text-xs">
+          <span data-testid="account-role">{role}</span> · {unlocked ? "unlocked" : "locked"}
         </span>
-        <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-(--radix-dropdown-menu-trigger-width) min-w-56">
-        <DropdownMenuLabel className="font-mono text-xs font-normal break-all">{address}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {keypair ? (
-          <DropdownMenuItem onSelect={() => setKeypair(null)}>
-            <Lock className="size-4" strokeWidth={1.5} /> Lock wallet
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem
-          onSelect={async () => {
-            await fetch("/api/auth/owner/logout", { method: "POST" });
-            setKeypair(null);
-            router.refresh();
-          }}
-        >
-          <LogOut className="size-4" strokeWidth={1.5} /> Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <span className="block truncate font-mono text-[13px]">{shortHex(address)}</span>
+      </span>
+      <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+    </button>
   );
 }
 
@@ -307,17 +294,18 @@ function NavItem({
   );
 }
 
-function pillTone(pill: string) {
-  if (/closes in/.test(pill)) return "bg-success";
-  if (/paying|waiting/.test(pill)) return "bg-warning";
-  return "bg-muted-foreground/60";
-}
+const PILL_TONE: Record<RoundPillData["tone"], string> = { live: "bg-success", wait: "bg-warning", idle: "bg-muted-foreground/60" };
 
-export function RoundPill({ pill, className }: { pill: string; className?: string }) {
+export function RoundPill({ pill, className }: { pill: RoundPillData; className?: string }) {
   return (
     <span className={cn("bg-card shadow-soft inline-flex h-8 items-center gap-2 rounded-full px-3.5 text-sm whitespace-nowrap", className)} data-testid="round-pill">
-      <span className={cn("size-1.5 rounded-full", pillTone(pill))} aria-hidden="true" />
-      {pill}
+      <span className={cn("size-1.5 rounded-full", PILL_TONE[pill.tone])} aria-hidden="true" />
+      {pill.text}
+      {pill.countdown ? (
+        <span className="text-muted-foreground tabular-nums">
+          {" "}· <Countdown to={pill.countdown.toMs} prefix={pill.countdown.prefix} />
+        </span>
+      ) : null}
     </span>
   );
 }

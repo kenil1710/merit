@@ -121,7 +121,7 @@ describe("rounds, metrics and the public record", () => {
     const rows = await pages.roundRows(db, program.id, view, state);
     expect(rows.map((r) => [r.number, r.status, r.submissions, r.paid])).toEqual([
       [2, "open", 0, "0"],
-      [1, "settled", 3, "70000000"],
+      [1, "closed", 3, "70000000"],
     ]);
     expect(pages.currentRoundStatus({ ...state, phase: 2n, roundEndMs: BigInt(NOW - 60_000) })).toBe("grace");
     expect(pages.currentRoundStatus({ ...state, phase: 2n, roundEndMs: BigInt(NOW - 600_000) })).toBe("settling");

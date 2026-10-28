@@ -1,5 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { RoundLine } from "@/components/rounds/round-line";
+import { roundLabel } from "@/lib/shared/round-window";
 import { notFound, redirect } from "next/navigation";
 import { CoinsArt } from "@/components/brand/illustrations";
 import { Submissions } from "@/components/contributor/submissions";
@@ -55,10 +57,7 @@ export async function ContributorProgram({ slug }: { slug: string }) {
         </h1>
         {c ? (
           <p className="mt-4">
-            <span className="bg-card shadow-soft inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm">
-              <span aria-hidden="true" className={`size-2 rounded-full ${open ? "bg-success" : "bg-muted-foreground/50"}`} />
-              {open ? `Round ${c.round.number} closes ${utc(c.round.endMs)}` : ended ? "Campaign ended" : c.status.text}
-            </span>
+            <RoundLine status={c.status} />
           </p>
         ) : null}
       </div>
@@ -106,15 +105,20 @@ export async function ContributorProgram({ slug }: { slug: string }) {
                 className="mt-5"
                 size="sm"
                 label="Your rounds"
-                steps={view.rounds.map((r) => ({
-                  key: String(r.round),
-                  label: `Round ${r.round} · ${r.state === "closing" ? "closing" : r.state}`,
-                  // A closed round is finished whether or not it paid: never "waiting".
-                  status: r.state === "open" ? "current" : r.state === "closing" ? "waiting" : "done",
-                  statusLabel: r.state === "open" ? "open" : r.state === "closing" ? "closing, paying out" : "closed",
-                  meta: r.paid > 0n ? `${formatRlo(r.paid)} RLO` : undefined,
-                  detail: `${r.submitted} submitted · ${r.approved} approved`,
-                }))}
+                steps={view.rounds.map((r) => {
+                  // The shared labels: a round that ended but can still pay is in its Grace period (the live round,
+                  // while the campaign says so) or Settling.
+                  const label = roundLabel(r.state === "closing" ? (c && r.round === c.round.number && c.status.state === "grace" ? "grace" : "settling") : r.state);
+                  return {
+                    key: String(r.round),
+                    label: `Round ${r.round} · ${label}`,
+                    // A closed round is finished whether or not it paid: never "waiting".
+                    status: r.state === "open" ? "current" : r.state === "closing" ? "waiting" : "done",
+                    statusLabel: label,
+                    meta: r.paid > 0n ? `${formatRlo(r.paid)} RLO` : undefined,
+                    detail: `${r.submitted} submitted · ${r.approved} approved`,
+                  };
+                })}
               />
             )}
           </section>

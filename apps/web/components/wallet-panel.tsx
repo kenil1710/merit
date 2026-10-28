@@ -2,39 +2,31 @@
 
 import type { Keypair } from "@rialo/ts-cdk";
 import { KeyRound, Lock, Wallet } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { HexValue } from "@/components/hex-value";
 import { Card } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaucetButton } from "@/components/faucet-button";
-import { createWallet, errorAfterEdit, forgetWallet, relayClient, savedAddress, unlockWallet } from "@/lib/client/wallet";
+import { NewPassphraseFields } from "@/components/wallet/passphrase-fields";
+import { useUnlockedWallet } from "@/lib/client/owner-wallet";
+import { useBalance, useSavedAddress } from "@/lib/client/use-wallet";
+import { createWallet, errorAfterEdit, lockWallet, newPassphraseError, openWalletPanel, unlockWallet } from "@/lib/client/wallet";
 import { formatRlo } from "@/lib/merit/constants";
 
 /** The embedded Rialo wallet: create, unlock, faucet. The key never leaves the browser. */
 export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair | null) => void; purpose: string }) {
-  const [address, setAddress] = useState<string | null>(null);
-  const [keypair, setKeypair] = useState<Keypair | null>(null);
+  const address = useSavedAddress();
+  const unlocked = useUnlockedWallet();
+  const keypair = unlocked && unlocked.publicKey.toString() === address ? unlocked : null;
   const [passphrase, setPassphrase] = useState("");
-  const [balance, setBalance] = useState<bigint | null>(null);
+  const [confirm, setConfirm] = useState("");
+  const { balance, afterFaucet } = useBalance(address);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setAddress(savedAddress()), []);
-
-  const refresh = useCallback(async (addr: string) => {
-    try {
-      const { PublicKey } = await import("@rialo/ts-cdk");
-      setBalance(await relayClient().getBalance(PublicKey.fromString(addr)));
-    } catch {
-      setBalance(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (address) void refresh(address);
-  }, [address, refresh]);
+  useEffect(() => onChange(keypair), [keypair, onChange]);
 
   async function run(label: string, task: () => Promise<void>) {
     setBusy(label);
@@ -48,13 +40,6 @@ export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair
     }
   }
 
-  const unlocked = (k: Keypair) => {
-    setKeypair(k);
-    setAddress(k.publicKey.toString());
-    setPassphrase("");
-    onChange(k);
-  };
-
   return (
     <Card
       title={
@@ -65,7 +50,7 @@ export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair
       description={purpose}
       actions={
         keypair ? (
-          <Button variant="ghost" size="sm" onClick={() => { setKeypair(null); onChange(null); }}>
+          <Button variant="ghost" size="sm" onClick={() => void lockWallet()}>
             <Lock className="size-3.5" /> Lock
           </Button>
         ) : null
@@ -93,45 +78,46 @@ export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair
             className="grid gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              void run(address ? "Unlocking…" : "Creating…", async () => unlocked(address ? await unlockWallet(passphrase) : await createWallet(passphrase)));
+              const invalid = address ? null : newPassphraseError(passphrase, confirm);
+              if (invalid) return setError(invalid);
+              void run(address ? "Unlocking…" : "Creating…", async () => {
+                await (address ? unlockWallet(passphrase) : createWallet(passphrase, confirm));
+                setPassphrase("");
+                setConfirm("");
+              });
             }}
           >
-            <Label htmlFor="wallet-passphrase">{address ? "Passphrase" : "Choose a passphrase"}</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="wallet-passphrase"
-                type="password"
-                autoComplete={address ? "current-password" : "new-password"}
-                placeholder={address ? "Passphrase to unlock" : "New passphrase (8+ characters)"}
-                value={passphrase}
-                onChange={(e) => {
-                  setPassphrase(e.target.value);
-                  setError((err) => errorAfterEdit(err, e.target.value, !address));
-                }}
-                className="h-10"
-              />
-              <Button type="submit" className="h-10 px-4" disabled={!passphrase || Boolean(busy)}>
-                <KeyRound className="size-4" />
-                {busy ?? (address ? "Unlock" : "Create wallet")}
-              </Button>
-            </div>
+            {address ? (
+              <>
+                <Label htmlFor="wallet-passphrase">Passphrase</Label>
+                <Input
+                  id="wallet-passphrase"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Passphrase to unlock"
+                  value={passphrase}
+                  onChange={(e) => {
+                    setPassphrase(e.target.value);
+                    setError((err) => errorAfterEdit(err, e.target.value, false));
+                  }}
+                  className="h-10"
+                />
+              </>
+            ) : (
+              <NewPassphraseFields id="wallet-passphrase" value={passphrase} confirm={confirm} onChange={setPassphrase} onConfirmChange={setConfirm} />
+            )}
+            <Button type="submit" className="h-10 w-fit px-4" disabled={!passphrase || (!address && !confirm) || Boolean(busy)}>
+              <KeyRound className="size-4" />
+              {busy ?? (address ? "Unlock" : "Create wallet")}
+            </Button>
           </form>
         ) : (
-          <FaucetButton keypair={keypair} disabled={Boolean(busy)} onFunded={() => refresh(keypair.publicKey.toString())} />
+          <FaucetButton address={keypair.publicKey.toString()} disabled={Boolean(busy)} onFunded={afterFaucet} />
         )}
 
-        {address && !keypair ? (
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground w-fit text-xs underline underline-offset-4"
-            onClick={() => {
-              if (window.confirm("Remove this wallet from the browser? Without it, any RLO in it is lost.")) {
-                forgetWallet();
-                setAddress(null);
-              }
-            }}
-          >
-            Remove from this browser
+        {address ? (
+          <button type="button" className="text-muted-foreground hover:text-foreground w-fit text-xs underline underline-offset-4" onClick={openWalletPanel}>
+            Backup, import or forget this wallet
           </button>
         ) : null}
         {error ? <p className="text-danger text-sm">{error}</p> : null}

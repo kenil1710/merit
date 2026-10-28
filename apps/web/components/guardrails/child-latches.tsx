@@ -1,6 +1,4 @@
 import { Card, Notice, Section } from "@/components/ui-kit";
-import type { CampaignUsage } from "@/lib/server/latch-usage";
-import { cents } from "./campaign-usage";
 import { cn } from "@/lib/utils";
 
 export type ChildLatchView = {
@@ -14,12 +12,24 @@ export type ChildLatchView = {
 
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
+export const CHILD_WINDOW_DAYS = 7;
+
+/**
+ * One source and one window for a campaign latch's card: the requests in Latch's own audit log of that latch over the
+ * last 7 days (UTC). `complete` is false when the oldest entry Latch returned is still inside the window, so older
+ * ones may exist and the count is a lower bound.
+ */
+export function childWindow(audit: ChildLatchView["audit"], now: number) {
+  const since = now - CHILD_WINDOW_DAYS * 86_400_000;
+  const inWindow = audit.filter((e) => Date.parse(e.timestamp) >= since).sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+  const oldest = audit.reduce((m, e) => Math.min(m, Date.parse(e.timestamp)), Infinity);
+  const complete = audit.length === 0 || oldest < since;
+  const allowed = inWindow.filter((e) => e.decision === "allow").length;
+  return { entries: inWindow, total: inWindow.length, allowed, denied: inWindow.length - allowed, complete, since: new Date(since) };
+}
+
 /** Each campaign's own extended latch, read live with its own token: it inherits the parent's policy and only narrows it. */
-export function ChildLatches({ children: latches, today, week }: { children: ChildLatchView[]; today: CampaignUsage[] | null; week: CampaignUsage[] | null }) {
-  const side = (list: CampaignUsage[] | null, c: ChildLatchView) => {
-    const u = list?.find((x) => x.campaign === c.campaign);
-    return u ? (c.latch === "merit-judge" ? u.judge : u.x) : list ? { calls: 0, cents: 0 } : null;
-  };
+export function ChildLatches({ children: latches, readAt }: { children: ChildLatchView[]; readAt: Date }) {
   return (
     <Section
       title="Campaign latches"
@@ -31,6 +41,7 @@ export function ChildLatches({ children: latches, today, week }: { children: Chi
         <div className="grid gap-5 xl:grid-cols-2">
           {latches.map((c) => {
             const extended = (c.whoami.chainDepth ?? 0) >= 1;
+            const w = childWindow(c.audit, readAt.getTime());
             return (
               <Card
                 key={`${c.latch}${c.campaign}`}
@@ -51,32 +62,36 @@ export function ChildLatches({ children: latches, today, week }: { children: Chi
                   {!c.whoami.error && !extended ? <Notice tone="danger">This token is not an extended latch (chain depth 0). Use a child created with Extend.</Notice> : null}
                   {c.whoami.error ? <Notice tone="danger">{c.whoami.error}. Merit does not fall back to the parent for this campaign.</Notice> : null}
                   <div className="bg-muted/50 rounded-xl p-4" data-testid="child-usage">
-                    <p className="label">This campaign&apos;s calls (Merit&apos;s log, UTC)</p>
-                    {side(today, c) ? (
-                      <p className="mt-2">
-                        <span className="display text-2xl tabular-nums">{side(today, c)!.calls}</span>
-                        <span className="text-muted-foreground"> today · {side(week, c)?.calls ?? "?"} in 7 days</span>
-                        {c.latch === "merit-judge" ? <span className="text-muted-foreground"> · {cents((side(today, c) as { cents?: number }).cents ?? 0)} today</span> : null}
-                      </p>
-                    ) : (
-                      <p className="text-soft mt-2">Merit&apos;s log isn&apos;t reachable right now.</p>
-                    )}
-                    <p className="text-muted-foreground mt-2 text-xs">
-                      Chain depth {c.whoami.chainDepth ?? "?"}.{" "}
+                    <p className="label">Requests through this latch · last {CHILD_WINDOW_DAYS} days (UTC)</p>
+                    <p className="mt-2">
+                      <span className="display text-2xl tabular-nums" data-testid="child-count">
+                        {w.complete ? w.total : `${w.total}+`}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        since {w.since.toISOString().slice(0, 16).replace("T", " ")} UTC · {w.allowed} allowed{w.denied ? ` · ${w.denied} denied` : ""}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                      Counted from Latch&apos;s own audit log of this latch, the same entries listed below, so it includes REX validators&apos; reads.
+                      {w.complete ? "" : " Latch returned only its newest entries, so older ones in the window may exist."} The &quot;Per campaign&quot; table further
+                      down counts Merit&apos;s own calls instead (parent and child latches, no validator reads). Chain depth {c.whoami.chainDepth ?? "?"}.{" "}
                       {c.budget.maxDailyCents !== undefined
-                        ? `Latch's counter shows ${c.budget.currentDailySpendCents ?? 0}¢ of ${c.budget.maxDailyCents}¢ (whole cents; the child's own cap is set in its pipeline and enforced by the proxy).`
+                        ? `Daily spend cap: Latch's counter shows ${c.budget.currentDailySpendCents ?? 0}¢ of ${c.budget.maxDailyCents}¢ used today (whole cents).`
                         : c.budget.message ?? c.budget.error ?? ""}
                     </p>
                   </div>
-                  <p className="label -mb-2">Newest entries in Latch&apos;s audit log</p>
-                  <ul className="grid gap-1 font-mono text-xs">
-                    {c.audit.slice(0, 5).map((e, i) => (
+                  <p className="label -mb-2">
+                    {w.total > 5 ? `Newest 5 of these ${w.complete ? w.total : `${w.total}+`} requests` : `These ${w.total} request${w.total === 1 ? "" : "s"}`} (Latch&apos;s audit log, UTC)
+                  </p>
+                  <ul className="grid gap-1 font-mono text-xs" data-testid="child-audit">
+                    {w.entries.slice(0, 5).map((e, i) => (
                       <li key={i} className="flex justify-between gap-3">
-                        <span className="truncate">{e.timestamp.slice(11, 19)} {e.method} {e.path}</span>
+                        <span className="truncate">{e.timestamp.slice(5, 10)} {e.timestamp.slice(11, 19)} {e.method} {e.path}</span>
                         <span className={e.decision === "allow" ? "text-success" : "text-danger"}>{e.decision === "allow" ? "allow" : `deny · ${e.deniedBy}`}</span>
                       </li>
                     ))}
-                    {c.audit.length === 0 ? <li className="text-muted-foreground font-sans">No requests yet.</li> : null}
+                    {w.total === 0 ? <li className="text-muted-foreground font-sans">No requests in the last {CHILD_WINDOW_DAYS} days.</li> : null}
                   </ul>
                 </div>
               </Card>

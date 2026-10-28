@@ -2,13 +2,15 @@
 
 import { KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { shortHex } from "@/components/hex-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInOwner, useOwnerWallet } from "@/lib/client/owner-wallet";
-import { createWallet, errorAfterEdit, savedAddress, unlockWallet } from "@/lib/client/wallet";
+import { useSavedAddress } from "@/lib/client/use-wallet";
+import { createWallet, errorAfterEdit, newPassphraseError, unlockWallet } from "@/lib/client/wallet";
+import { NewPassphraseFields } from "@/components/wallet/passphrase-fields";
 
 /**
  * Sign in as an owner with the Rialo wallet in this browser: unlock it (or create one), then sign a one-time
@@ -17,22 +19,25 @@ import { createWallet, errorAfterEdit, savedAddress, unlockWallet } from "@/lib/
 export function OwnerSignIn() {
   const router = useRouter();
   const { setKeypair } = useOwnerWallet();
-  const [address, setAddress] = useState<string | null>(null);
+  const address = useSavedAddress();
   const [passphrase, setPassphrase] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => setAddress(savedAddress()), []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const invalid = address ? null : newPassphraseError(passphrase, confirm);
+    if (invalid) return setError(invalid);
     try {
       setBusy(address ? "Unlocking…" : "Creating wallet…");
-      const keypair = address ? await unlockWallet(passphrase) : await createWallet(passphrase);
+      const keypair = address ? await unlockWallet(passphrase) : await createWallet(passphrase, confirm);
       setBusy("Signing in…");
       await signInOwner(keypair);
       setKeypair(keypair);
       setPassphrase("");
+      setConfirm("");
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -52,22 +57,38 @@ export function OwnerSignIn() {
           No wallet in this browser yet. Choose a passphrase: Merit creates a Rialo wallet here and encrypts it with it.
         </p>
       )}
-      <div className="grid gap-1.5">
-        <Label htmlFor="owner-passphrase">{address ? "Passphrase" : "Choose a passphrase"}</Label>
-        <Input
+      {address ? (
+        <div className="grid gap-1.5">
+          <Label htmlFor="owner-passphrase">Passphrase</Label>
+          <Input
+            id="owner-passphrase"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Passphrase to unlock"
+            value={passphrase}
+            onChange={(e) => {
+              setPassphrase(e.target.value);
+              setError((err) => errorAfterEdit(err, e.target.value, false));
+            }}
+            className="h-10"
+          />
+        </div>
+      ) : (
+        <NewPassphraseFields
           id="owner-passphrase"
-          type="password"
-          autoComplete={address ? "current-password" : "new-password"}
-          placeholder={address ? "Passphrase to unlock" : "New passphrase (8+ characters)"}
           value={passphrase}
-          onChange={(e) => {
-            setPassphrase(e.target.value);
-            setError((err) => errorAfterEdit(err, e.target.value, !address));
+          confirm={confirm}
+          onChange={(v) => {
+            setPassphrase(v);
+            setError(null);
           }}
-          className="h-10"
+          onConfirmChange={(v) => {
+            setConfirm(v);
+            setError(null);
+          }}
         />
-      </div>
-      <Button type="submit" className="h-10" disabled={!passphrase || !!busy}>
+      )}
+      <Button type="submit" className="h-10" disabled={!passphrase || (!address && !confirm) || !!busy}>
         <KeyRound className="size-4" />
         {busy ?? (address ? "Unlock and sign in" : "Create wallet and sign in")}
       </Button>
@@ -94,7 +115,10 @@ export function UnlockWallet({ owner, purpose }: { owner: string; purpose: strin
         setError(null);
         try {
           const keypair = await unlockWallet(passphrase);
-          if (keypair.publicKey.toString() !== owner) throw new Error(`This browser's wallet isn't ${shortHex(owner)}, the one you signed in with.`);
+          if (keypair.publicKey.toString() !== owner) {
+            setKeypair(null);
+            throw new Error(`This browser's wallet isn't ${shortHex(owner)}, the one you signed in with.`);
+          }
           setKeypair(keypair);
         } catch (err) {
           setError((err as Error).message);
