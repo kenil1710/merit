@@ -184,7 +184,8 @@ export function DecisionDrawer({ decision: d, onClose }: { decision: DecisionVie
                       </p>
                       <p className="text-soft mt-1 text-xs leading-relaxed">
                         sha256 of the judge record equals the submission hash the agent wrote into the ledger entry:{" "}
-                        <span className="font-mono">{d.submissionHash.slice(0, 10)}…</span>
+                        <span className="font-mono">{d.submissionHash.slice(0, 10)}…</span>. That on-chain match is the
+                        check this page makes; the agent&apos;s signature on the record is checked in the owner&apos;s review drawer.
                       </p>
                     </div>
                   </>
