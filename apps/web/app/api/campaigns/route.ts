@@ -8,6 +8,7 @@ import { unhex } from "@/lib/merit/codec";
 import { campaignMessage, verifySignature } from "@/lib/merit/messages";
 import { workflowAddress } from "@/lib/merit/pda";
 import { rpc } from "@/lib/server/agent";
+import { sameOrigin } from "@/lib/server/http";
 import { store } from "@/lib/server/store";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: "bad_origin" }, { status: 403 });
   const body = (await request.json()) as { address?: string; slug?: string; name?: string; brief?: string; signature?: string };
   const { address, slug, name, brief, signature } = body;
   if (!address || !slug || !/^[0-9a-f]{64}$/.test(slug) || !name || !brief || !signature) {

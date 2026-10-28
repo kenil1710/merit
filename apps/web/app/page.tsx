@@ -78,7 +78,7 @@ export default async function Home() {
             <BigNumber label="RLO paid to contributors">{formatRlo(paid, 3)}</BigNumber>
             <BigNumber label="Campaign workflows on chain">{campaigns.length}</BigNumber>
             <BigNumber label="RLO repaid to the agent for REX">{formatRlo(reimbursed, 3)}</BigNumber>
-            <BigNumber label="Keepers or cron jobs">0</BigNumber>
+            <BigNumber label="Keepers needed for payouts">0</BigNumber>
           </dl>
         </section>
 

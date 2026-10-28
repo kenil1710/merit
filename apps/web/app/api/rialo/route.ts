@@ -10,7 +10,7 @@ import { RpcClient } from "@/lib/merit/chain";
 import { FAUCET_MAX_KELVIN, PROGRAM_ID, RPC_UPSTREAM } from "@/lib/merit/constants";
 import { isAddress } from "@/lib/server/agent";
 import { faucetVerdict, hashIp, releaseGrant, reserveGrant } from "@/lib/server/faucet";
-import { clientKey } from "@/lib/server/rate-limit";
+import { allow, clientKey, ipKey, rule } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
   if (!body || typeof body !== "object") return rpcError(null, -32600, "invalid request");
   const { id, method, params } = body as { id?: unknown; method?: unknown; params?: unknown };
   if (typeof method !== "string") return rpcError(id, -32600, "missing method");
+  // One network's share of the relay: generous for a wallet's confirm loops, not an open proxy.
+  if (!(await allow(rule(`relay:${ipKey(request)}`, 300, 60_000)))) return rpcError(id, -32005, "too many requests, slow down", 429);
 
   if (method === "getAccountsByOwner" && firstParam(params)?.owner !== PROGRAM_ID) {
     return rpcError(id, -32602, "only Merit program accounts can be listed");
@@ -68,7 +70,8 @@ export async function POST(request: NextRequest) {
       return rpcError(id, -32602, "faucet requests are capped at 1 RLO");
     }
     if (typeof wallet !== "string" || !isAddress(wallet)) return rpcError(id, -32602, "invalid wallet address");
-    return faucet(request, id, wallet, BigInt(kelvins), params);
+    // Forward exactly what was checked, never the caller's own params.
+    return faucet(request, id, wallet, BigInt(kelvins), [{ pubkey: wallet, kelvins }]);
   } else if (!READ_METHODS.has(method)) {
     return rpcError(id, -32601, `method ${method} is not allowed through this relay`);
   }

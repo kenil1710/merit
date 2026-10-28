@@ -74,3 +74,49 @@ describe("M-5 / L-4: rate limits are counted in Postgres, shared by every instan
     expect(rows.some((r) => r.key === key)).toBe(false);
   });
 });
+
+describe("L-12: the daily cron deletes rows nothing reads again", () => {
+  it("removes old nonces, intents, faucet grants and Latch calls, and keeps recent ones", async () => {
+    const { housekeeping, RETENTION } = await import("@/lib/server/housekeeping");
+    const db = await getDb();
+    const now = Date.now();
+    const old = new Date(now - 100 * 86_400_000);
+    const fresh = new Date(now);
+    await db.insert(schema.faucetGrants).values([{ wallet: "old", ipHash: "h", kelvin: 1n, createdAt: old }, { wallet: "fresh", ipHash: "h", kelvin: 1n, createdAt: fresh }]);
+    await db.insert(schema.latchCalls).values([
+      { latch: "merit-judge", campaign: "c", method: "POST", path: "/v1/messages", status: 200, createdAt: old },
+      { latch: "merit-judge", campaign: "c", method: "POST", path: "/v1/messages", status: 200, createdAt: fresh },
+    ]);
+    await housekeeping(db, now);
+    const grants = (await db.select().from(schema.faucetGrants)).map((g) => g.wallet);
+    expect(grants).toContain("fresh");
+    expect(grants).not.toContain("old");
+    const calls = await db.select().from(schema.latchCalls);
+    expect(calls.every((c) => c.createdAt.getTime() > now - RETENTION.latchCallMs)).toBe(true);
+    expect(calls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("L-2: each signed cookie only passes as its own type", () => {
+  it("a contributor session pasted into the owner cookie is refused", async () => {
+    vi.stubEnv("SESSION_SECRET", "test-secret-for-cookie-types-0123456789");
+    const jar = new Map<string, string>();
+    vi.doMock("next/headers", () => ({
+      cookies: async () => ({
+        get: (k: string) => (jar.has(k) ? { value: jar.get(k)! } : undefined),
+        set: (k: string, v: string) => void jar.set(k, v),
+        delete: (k: string) => void jar.delete(k),
+      }),
+    }));
+    vi.resetModules();
+    const s = await import("@/lib/server/session");
+    await s.setSession("42", "alice");
+    expect((await s.getSession())?.xUserId).toBe("42");
+    jar.set("merit_owner", jar.get("merit_session")!);
+    expect(await s.getOwnerSession()).toBeNull();
+    await s.setOwnerSession("u1", "W1");
+    jar.set("merit_session", jar.get("merit_owner")!);
+    expect(await s.getSession()).toBeNull();
+    vi.doUnmock("next/headers");
+  });
+});

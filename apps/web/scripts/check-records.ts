@@ -1,6 +1,7 @@
 // Every round of every program's campaign, as the public record shows it: for each ledger entry, whether its judge
 // record exists and matches the on-chain hash, and which transactions the drawer links. Reading it also rebuilds a
-// missing judge record from Neon (campaign-view does that on every view), so this doubles as the repair.
+// missing judge record from Neon and saves it (campaignView with repair; page views never write), so this doubles
+// as the repair.
 // Usage: npx tsx --env-file=.env.local --conditions=react-server scripts/check-records.ts [campaign address ...]
 import { isNotNull } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
@@ -13,7 +14,7 @@ const campaigns = args.length
   : (await db.select({ a: schema.programs.campaignAddress }).from(schema.programs).where(isNotNull(schema.programs.campaignAddress))).map((r) => r.a!);
 let problems = 0;
 for (const address of campaigns) {
-  const view = await campaignView(address);
+  const view = await campaignView(address, { repair: true });
   if (!view) {
     console.log(`${address}: not a live campaign account`);
     continue;

@@ -1,7 +1,10 @@
 import "server-only";
 
-// Every call to X and Anthropic goes through Merit's Latch latches. The
-// server holds only `lat_` tokens; the provider keys stay inside Latch.
+// Every judge call (Anthropic) and every X read goes through Merit's Latch
+// latches, so the server holds only `lat_` tokens for them; the provider keys
+// stay inside Latch. The one exception is "Sign in with X": the OAuth token
+// exchange and /2/users/me call api.x.com directly with Merit's own X OAuth
+// client secret, as user sign-in requires.
 // Every call names its campaign in X-Merit-Campaign (merit-judge and merit-x
 // require it) and is written to latch_calls, which is how the Guardrails page
 // groups spend and decisions per campaign: Latch's audit log keeps no headers.

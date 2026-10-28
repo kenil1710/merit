@@ -14,6 +14,16 @@ export const MAX_SCORE = 100;
 export const MIN_ROUND_MS = 60_000;
 export const MAX_ROUND_MS = 7 * 86_400_000;
 export const REX_COST_KELVIN = 12_000_000n;
+/// Rent of a round ledger (~3.3 KB), repaid to the agent from the operations budget for each round with approvals.
+export const LEDGER_RENT_KELVIN = 24_067_680n;
+
+/**
+ * Verifications the operations budget still covers, as the program counts them: it refuses an approval unless one
+ * more verification plus the round's ledger rent fits the budget. Every page uses this one number.
+ */
+export function verificationsLeft(opsBudgetKelvin: bigint, ledgerRentKelvin = LEDGER_RENT_KELVIN): number {
+  return Number(opsBudgetKelvin > ledgerRentKelvin ? (opsBudgetKelvin - ledgerRentKelvin) / REX_COST_KELVIN : 0n);
+}
 /// The relay never requests more than this per faucet call.
 export const FAUCET_MAX_KELVIN = 1_000_000_000n;
 

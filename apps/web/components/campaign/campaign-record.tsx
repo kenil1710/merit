@@ -6,7 +6,7 @@ import { KelvinText } from "@/components/kelvin-text";
 import { phaseStatus, StatusBadge } from "@/components/status-badge";
 import { Card, PageHeader, Section, Stat } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
-import { formatRlo, REX_COST_KELVIN } from "@/lib/merit/constants";
+import { formatRlo, verificationsLeft } from "@/lib/merit/constants";
 import type { CampaignView } from "@/lib/server/campaign-view";
 import { ArrowRight } from "lucide-react";
 
@@ -42,7 +42,7 @@ function activityKind(line: string): { label: string; tone: string } {
  */
 export function CampaignRecord({ view, joinHref = "/join", roundBase, extra }: { view: CampaignView; joinHref?: string; roundBase?: string; extra?: ReactNode }) {
   const { config, books, round } = view;
-  const verificationsLeft = Number(BigInt(books.ops) / REX_COST_KELVIN);
+  const opsLeft = verificationsLeft(BigInt(books.ops));
   const decisions = view.rounds.reduce((n, r) => n + r.decisions.length, 0);
 
   return (
@@ -74,7 +74,7 @@ export function CampaignRecord({ view, joinHref = "/join", roundBase, extra }: {
         <Stat
           label="Operations budget"
           value={rlo(books.ops, 3)}
-          hint={`≈ ${verificationsLeft} verifications left · ${rlo(books.opsReimbursed, 4)} repaid to the agent`}
+          hint={`${opsLeft} verifications left · ${rlo(books.opsReimbursed, 4)} repaid to the agent`}
         />
         <Stat
           label={`Round ${round.number}`}

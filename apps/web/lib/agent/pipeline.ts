@@ -4,7 +4,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { base58 } from "@scure/base";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { audit, schema, type Db } from "@/lib/db";
-import { REX_COST_KELVIN } from "@/lib/merit/constants";
+import { LEDGER_RENT_KELVIN, REX_COST_KELVIN } from "@/lib/merit/constants";
 import type { StoredJudgement } from "@/lib/merit/judgement";
 import type { Entry, MeritState } from "@/lib/merit/state";
 import { approvableRound } from "@/lib/shared/round-window";
@@ -23,8 +23,6 @@ import { FetchError, type FetchOutcome, type Resource } from "./types";
  * the submission pending to be retried; nothing is half-written.
  */
 
-/** Ledger rent the agent is repaid when a round's first approval opens its ledger (about 0.024 RLO). */
-const LEDGER_RENT_KELVIN = 24_067_680n;
 
 export class RetryableError extends Error {
   readonly retryable = true;

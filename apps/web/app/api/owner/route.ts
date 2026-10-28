@@ -3,7 +3,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { listCampaigns } from "@/lib/merit/chain";
-import { REX_COST_KELVIN } from "@/lib/merit/constants";
+import { verificationsLeft } from "@/lib/merit/constants";
 import { isAddress, rpc } from "@/lib/server/agent";
 import { store } from "@/lib/server/store";
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       capPerRound: c.capPerRound.toString(),
       agent: c.agent,
       // Each round with approvals costs one ledger's rent plus 0.012 RLO per verification.
-      verificationsLeft: Number(c.opsBudgetKelvin > BigInt(ledgerRent) ? (c.opsBudgetKelvin - BigInt(ledgerRent)) / REX_COST_KELVIN : 0n),
+      verificationsLeft: verificationsLeft(c.opsBudgetKelvin, BigInt(ledgerRent)),
     }));
   return NextResponse.json({ campaigns });
 }

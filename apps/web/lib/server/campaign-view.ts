@@ -89,9 +89,9 @@ const NO_REPORT = "11111111111111111111111111111111";
  * is approved; the REX verdict is the entry's status; paid is the payout log line. DevNet lists only an account's 20
  * newest transactions and settlement's polling fills those, so the approve transaction comes from the judge record
  * (or the submission row) and the verdict from the report account. A judge record lost before it was saved is
- * rebuilt from the decision whose hash the entry carries, and saved so the next view reads it directly.
+ * rebuilt from the decision whose hash the entry carries.
  */
-async function decisions(ledger: MeritState, settled: boolean): Promise<DecisionView[]> {
+async function decisions(ledger: MeritState, settled: boolean, repair: boolean): Promise<DecisionView[]> {
   const events = await meritEvents(rpc, ledger.address, 50);
   return Promise.all(
     ledger.entries.map(async (entry) => {
@@ -99,10 +99,12 @@ async function decisions(ledger: MeritState, settled: boolean): Promise<Decision
       const approve = events.find((e) => !e.failed && e.lines.some((l) => l.startsWith(`Merit approved post ${postId} `)));
       let stored = await store.judgement(postId);
       const facts = !stored || stored.submissionHash !== entry.submissionHash || !stored.approveSignature ? await approvalFacts(entry.submissionHash) : null;
+      // Read-only: a missing or mismatched record is rebuilt in memory for this view. scripts/check-records.ts repairs
+      // the store; a public GET never writes (and two campaigns sharing a post can't overwrite each other's record).
       if (facts && (!stored || stored.submissionHash !== entry.submissionHash)) {
         const had = stored;
         stored = facts.judgement;
-        await (had ? store.replaceJudgement(postId, stored) : store.saveJudgement(postId, stored)).catch(() => undefined);
+        if (repair) await (had ? store.replaceJudgement(postId, stored) : store.saveJudgement(postId, stored));
       }
       let judge: DecisionView["judge"];
       if (stored) {
@@ -153,7 +155,8 @@ async function decisions(ledger: MeritState, settled: boolean): Promise<Decision
   );
 }
 
-export async function campaignView(address: string): Promise<CampaignView | null> {
+/** `repair` (scripts/check-records.ts only) saves judge records rebuilt from Neon; page views never write. */
+export async function campaignView(address: string, { repair = false }: { repair?: boolean } = {}): Promise<CampaignView | null> {
   const state = await loadState(rpc, address);
   if (!state || state.kind !== 1n) return null;
   const meta = await store.campaign(address);
@@ -163,7 +166,7 @@ export async function campaignView(address: string): Promise<CampaignView | null
       const ledger = await findLedger(rpc, state, n);
       // A ledger below the current round has settled; the current one settles once the campaign leaves Open.
       const settled = n < state.round || state.phase !== 1n;
-      return { round: Number(n), ledger: ledger?.address, agent: ledger?.agent, decisions: ledger ? await decisions(ledger, settled) : [] };
+      return { round: Number(n), ledger: ledger?.address, agent: ledger?.agent, decisions: ledger ? await decisions(ledger, settled, repair) : [] };
     }),
   );
   const activity = await meritEvents(rpc, address, 15);

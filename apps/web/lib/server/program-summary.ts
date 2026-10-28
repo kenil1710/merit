@@ -1,7 +1,7 @@
 import "server-only";
 
 import { findLedger, loadState } from "@/lib/merit/chain";
-import { REX_COST_KELVIN } from "@/lib/merit/constants";
+import { verificationsLeft as opsVerificationsLeft } from "@/lib/merit/constants";
 import type { MeritState } from "@/lib/merit/state";
 import { setupCurrent, type SetupState } from "@/lib/setup-flow";
 import { shortFromNow } from "@/lib/when";
@@ -13,7 +13,6 @@ import type { Program } from "./programs";
 import { store } from "./store";
 
 /** Ledger rent kept from the operations budget for each round with approvals (about 0.024 RLO). */
-const LEDGER_RENT_KELVIN = 24_067_680n;
 const LOW_VERIFICATIONS = 3n;
 
 export type Need = { text: string; href: string; action: string; kind: "setup" | "funds" | "ops" | "review" };
@@ -79,7 +78,7 @@ export function roundPill(state: MeritState | null, program: Program, now = Date
 }
 
 export function verificationsLeft(state: MeritState): number {
-  return Number(state.opsBudgetKelvin > LEDGER_RENT_KELVIN ? (state.opsBudgetKelvin - LEDGER_RENT_KELVIN) / REX_COST_KELVIN : 0n);
+  return opsVerificationsLeft(state.opsBudgetKelvin);
 }
 
 export async function programSummary(program: Program, now = Date.now()): Promise<ProgramSummary> {

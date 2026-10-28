@@ -110,7 +110,13 @@ export function buildSelfThread(root: Post, found: Post[], opts: { max?: number;
   return { posts, truncated, note };
 }
 
-export async function fetchXPost(id: string, get: XGet, now: () => Date = () => new Date()): Promise<FetchOutcome> {
+/**
+ * merit-x allows post lookups only (its endpoint filter refuses /2/tweets/search), so the thread search would cost a
+ * logged 403 for every post with replies. It runs only when MERIT_X_THREAD_SEARCH=1, once the latch allows search.
+ */
+const THREAD_SEARCH = () => process.env.MERIT_X_THREAD_SEARCH === "1";
+
+export async function fetchXPost(id: string, get: XGet, now: () => Date = () => new Date(), opts: { threadSearch?: boolean } = {}): Promise<FetchOutcome> {
   if (!/^\d{1,20}$/.test(id)) throw new FetchError("Not an X post id.", false);
   let body: z.infer<typeof Lookup>;
   try {
@@ -134,7 +140,9 @@ export async function fetchXPost(id: string, get: XGet, now: () => Date = () => 
   let thread: SelfThread = { posts: [data], truncated: false, note: null };
   const posted = data.created_at ? Date.parse(data.created_at) : NaN;
   if (!isRepost && (m.reply_count ?? 0) > 0) {
-    if (Number.isFinite(posted) && now().getTime() - posted > RECENT_SEARCH_WINDOW_MS) {
+    if (!(opts.threadSearch ?? THREAD_SEARCH())) {
+      thread.note = "Replies weren't read (merit-x allows post lookups only), so only this post was judged.";
+    } else if (Number.isFinite(posted) && now().getTime() - posted > RECENT_SEARCH_WINDOW_MS) {
       thread.note = "Replies weren't read: X search only covers the last 7 days, so only this post was judged.";
     } else {
       try {

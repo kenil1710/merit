@@ -386,12 +386,18 @@ describe("X fetcher (merit-x)", () => {
         ? { data: [reply("102", "101"), reply("101", "100"), reply("103", "101", "7")] }
         : lookup({ public_metrics: { reply_count: 2 }, created_at: new Date().toISOString() }),
     );
-    const out = await fetchXPost("100", get);
+    const out = await fetchXPost("100", get, undefined, { threadSearch: true });
     expect(get).toHaveBeenCalledWith(threadSearchPath("100", "42"));
     expect(out.status === "ok" && out.resource.x.thread.postIds).toEqual(["100", "101", "102"]);
     expect(out.status === "ok" && out.resource.text).toMatch(/^\[Post 1 of 3\]/);
-    const refused = await fetchXPost("100", async (path) => (path.startsWith("/2/tweets/search") ? Promise.reject({ status: 403, deniedBy: "endpoint" }) : lookup({ public_metrics: { reply_count: 2 }, created_at: new Date().toISOString() })));
+    const refused = await fetchXPost("100", async (path) => (path.startsWith("/2/tweets/search") ? Promise.reject({ status: 403, deniedBy: "endpoint" }) : lookup({ public_metrics: { reply_count: 2 }, created_at: new Date().toISOString() })), undefined, { threadSearch: true });
     expect(refused.status === "ok" && refused.resource.x.thread.note).toMatch(/only this post was judged/);
+  });
+  it("I-1: skips the thread search merit-x refuses unless it is turned on", async () => {
+    const get = vi.fn(async () => lookup({ public_metrics: { reply_count: 2 }, created_at: new Date().toISOString() }));
+    const out = await fetchXPost("100", get);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(out.status === "ok" && out.resource.x.thread.note).toMatch(/only this post was judged/);
   });
   it("never links other people's replies into a thread", () => {
     const root = { id: "1", text: "a", author_id: "42" };
