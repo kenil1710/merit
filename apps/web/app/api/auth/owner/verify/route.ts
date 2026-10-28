@@ -7,7 +7,7 @@ import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { consumeNonce } from "@/lib/server/nonces";
 import { verifyOwnerSignIn } from "@/lib/server/owner-auth";
 import { upsertWalletUser } from "@/lib/server/programs";
-import { allow, clientKey } from "@/lib/server/rate-limit";
+import { allow, ipKey, rule } from "@/lib/server/rate-limit";
 import { setOwnerSession } from "@/lib/server/session";
 
 export const runtime = "nodejs";
@@ -19,7 +19,7 @@ const Body = z.object({
 
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
-  if (!allow(`owner-verify:${clientKey(request)}`, 20, 60_000)) return jsonError("Too many sign-in attempts. Wait a minute and try again.", 429);
+  if (!(await allow(rule(`owner-verify:${ipKey(request)}`, 20, 60_000), rule(`owner-verify-day:${ipKey(request)}`, 100, 86_400_000)))) return jsonError("Too many sign-in attempts. Wait a minute and try again.", 429);
   const body = Body.safeParse(await readJson(request));
   if (!body.success) return jsonError("invalid_body", 400);
   const db = await getDb();

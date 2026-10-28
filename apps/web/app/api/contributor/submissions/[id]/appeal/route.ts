@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { requestAppeal } from "@/lib/server/contributors";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, ipKey, rule } from "@/lib/server/rate-limit";
 import { getSession } from "@/lib/server/session";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getSession();
   if (!session) return jsonError("Sign in with X first.", 401);
-  if (!allow(`appeal:${session.xUserId}`, 3, 60_000)) return jsonError("Too many requests at once. Wait a minute and try again.", 429);
+  if (!(await allow(rule(`appeal:${session.xUserId}`, 3, 60_000), rule(`appeal-ip:${ipKey(request)}`, 20, 10 * 60_000)))) return jsonError("Too many requests at once. Wait a minute and try again.", 429);
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) return jsonError("not_found", 404);
   const body = Body.safeParse(await readJson(request));

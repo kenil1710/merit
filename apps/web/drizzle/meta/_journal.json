@@ -50,6 +50,13 @@
       "when": 1793176212421,
       "tag": "0006_faucet_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793179460749,
+      "tag": "0007_rate_hits",
+      "breakpoints": true
     }
   ]
 }

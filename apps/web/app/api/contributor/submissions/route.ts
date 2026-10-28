@@ -9,7 +9,7 @@ import { membership, publicProgram } from "@/lib/server/contributors";
 import { ConfigError } from "@/lib/server/env";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { LatchDenied } from "@/lib/server/latch";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, ipKey, rule } from "@/lib/server/rate-limit";
 import { getSession } from "@/lib/server/session";
 import { runAgent, submitWork } from "@/lib/server/submissions";
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getSession();
   if (!session) return jsonError("Sign in with X first.", 401);
-  if (!allow(`submit:${session.xUserId}`, 6, 60_000)) return jsonError("Too many submissions at once. Wait a minute.", 429);
+  if (!(await allow(rule(`submit:${session.xUserId}`, 6, 60_000), rule(`submit-ip:${ipKey(request)}`, 30, 10 * 60_000)))) return jsonError("Too many submissions at once. Wait a minute.", 429);
   const body = Body.safeParse(await readJson(request));
   if (!body.success) return jsonError("Paste a link to your post.", 400);
   const db = await getDb();

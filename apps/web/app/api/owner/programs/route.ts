@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { createProgram, listPrograms } from "@/lib/server/programs";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, rule } from "@/lib/server/rate-limit";
 import { getOwnerSession } from "@/lib/server/session";
 import { ProgramInput } from "@/lib/shared/program";
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getOwnerSession();
   if (!session) return jsonError("Your session expired. Sign in again.", 401);
-  if (!allow(`program-create:${session.sub}`, 20, 3_600_000)) return jsonError("That's a lot of new programs. Try again later.", 429);
+  if (!(await allow(rule(`program-create:${session.sub}`, 20, 3_600_000)))) return jsonError("That's a lot of new programs. Try again later.", 429);
   const parsed = ProgramInput.safeParse(await readJson(request));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

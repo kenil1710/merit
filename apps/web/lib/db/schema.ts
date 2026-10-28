@@ -523,3 +523,14 @@ export const appeals = pgTable(
   },
   (t) => [index("appeals_program_open_idx").on(t.programId, t.resolvedAt)],
 );
+
+/** Fixed-window request counters shared by every server instance (sign-in, submit, "Read it", probes). */
+export const rateHits = pgTable(
+  "rate_hits",
+  {
+    key: text("key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index("rate_hits_window_idx").on(t.windowStart)],
+);

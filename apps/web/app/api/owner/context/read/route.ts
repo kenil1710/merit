@@ -8,7 +8,7 @@ import { ContextReadInput } from "@/lib/shared/context";
 import { configured, env } from "@/lib/server/env";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { judgeClient } from "@/lib/server/latch";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, ipKey, rule } from "@/lib/server/rate-limit";
 import { pageText, safeFetchHtml } from "@/lib/server/safe-fetch";
 import { getOwnerSession } from "@/lib/server/session";
 
@@ -19,7 +19,16 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getOwnerSession();
   if (!session) return jsonError("Your session expired. Sign in again.", 401);
-  if (!allow(`context-read:${session.sub}`, 10, 10 * 60_000)) return jsonError("That's a lot of reads. Wait a few minutes and try again.", 429);
+  // Each read is a paid model call through merit-judge: limited per owner, per wallet, per network and in total, so
+  // fresh wallets can't drain the judge's daily budget that contributors' submissions need.
+  const readLimits = [
+    rule(`context-read:owner:${session.sub}`, 10, 10 * 60_000),
+    rule(`context-read:wallet:${session.addr}`, 10, 10 * 60_000),
+    rule(`context-read:wallet-day:${session.addr}`, 30, 86_400_000),
+    rule(`context-read:ip:${ipKey(request)}`, 20, 86_400_000),
+    rule("context-read:all", 150, 86_400_000),
+  ];
+  if (!(await allow(...readLimits))) return jsonError("That's a lot of reads. Wait a few minutes and try again.", 429);
   const body = ContextReadInput.safeParse(await readJson(request));
   if (!body.success) return jsonError(body.error.issues[0]?.message ?? "Check the description and links.", 400);
   const result = await readContext(

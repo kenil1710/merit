@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { agentDeps } from "@/lib/server/agent-deps";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, rule } from "@/lib/server/rate-limit";
 import { decideByHuman } from "@/lib/server/review";
 import { getOwnerSession } from "@/lib/server/session";
 import { RloInput } from "@/lib/shared/program";
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getOwnerSession();
   if (!session) return jsonError("Your session expired. Sign in again.", 401);
-  if (!allow(`decide:${session.sub}`, 30, 60_000)) return jsonError("Too many decisions at once. Wait a minute.", 429);
+  if (!(await allow(rule(`decide:${session.sub}`, 30, 60_000)))) return jsonError("Too many decisions at once. Wait a minute.", 429);
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) return jsonError("not_found", 404);
   const body = Body.safeParse(await readJson(request));

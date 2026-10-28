@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { and, asc, eq, lt } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { agentDeps } from "@/lib/server/agent-deps";
+import { pruneRateHits } from "@/lib/server/rate-limit";
 import { runAgent } from "@/lib/server/submissions";
 
 export const runtime = "nodejs";
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return new NextResponse(null, { status: 401 });
   const db = await getDb();
+  await pruneRateHits(db);
   const stale = await db
     .select({ id: schema.submissions.id })
     .from(schema.submissions)

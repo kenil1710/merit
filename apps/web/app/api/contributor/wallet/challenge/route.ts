@@ -7,7 +7,7 @@ import { isAddress } from "@/lib/server/agent";
 import { publicProgram } from "@/lib/server/contributors";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { issueNonce } from "@/lib/server/nonces";
-import { allow } from "@/lib/server/rate-limit";
+import { allow, rule } from "@/lib/server/rate-limit";
 import { getSession } from "@/lib/server/session";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
   const session = await getSession();
   if (!session) return jsonError("Sign in with X first.", 401);
-  if (!allow(`wallet-challenge:${session.xUserId}`, 20, 60_000)) return jsonError("Too many attempts. Wait a minute and try again.", 429);
+  if (!(await allow(rule(`wallet-challenge:${session.xUserId}`, 20, 60_000)))) return jsonError("Too many attempts. Wait a minute and try again.", 429);
   const body = (await readJson(request)) as { slug?: unknown; wallet?: unknown } | null;
   if (typeof body?.wallet !== "string" || !isAddress(body.wallet)) return jsonError("Not a Rialo address.", 400);
   const db = await getDb();

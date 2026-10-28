@@ -79,6 +79,18 @@ export function GoLive({ program, onLive }: { program: GoLiveProgram; onLive?: (
       setBalance(null);
     }
   }, [program.owner]);
+  /** After the faucet: the node that answers can lag the one that confirmed, so read until the balance moves. */
+  const balanceAfterFaucet = useCallback(async () => {
+    const before = balance ?? 0n;
+    for (let i = 0; i < 10; i++) {
+      const now = await relayClient()
+        .getBalance(PublicKey.fromString(program.owner))
+        .catch(() => null);
+      if (now !== null) setBalance(now);
+      if (now !== null && now > before) return;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }, [balance, program.owner]);
 
   useEffect(() => {
     void refresh().catch((e) => setError((e as Error).message));
@@ -213,7 +225,7 @@ export function GoLive({ program, onLive }: { program: GoLiveProgram; onLive?: (
               <span className="mono-num font-medium">{balance === null ? "…" : rlo(balance)}</span>
               <span className="text-muted-foreground"> · needs about {rlo(planned + RENT_ALLOWANCE)}</span>
             </span>
-            <FaucetButton keypair={keypair} size="sm" disabled={running} onFunded={refreshBalance} />
+            <FaucetButton keypair={keypair} size="sm" disabled={running} onFunded={balanceAfterFaucet} />
           </div>
           {short ? <Notice tone="warning">The wallet holds less than the escrow and operations budget you planned. Use the faucet first.</Notice> : null}
           <Button size="lg" className="h-11 w-fit px-5 text-[15px]" disabled={running || short} onClick={run}>

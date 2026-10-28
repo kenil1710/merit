@@ -6,12 +6,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { upsertXUser } from "@/lib/server/contributors";
 import { env } from "@/lib/server/env";
+import { safeReturnTo } from "@/lib/server/http";
 import { setSession, takeOAuthState } from "@/lib/server/session";
 
 export const runtime = "nodejs";
 
 function fail(request: NextRequest, message: string, returnTo = "/join") {
-  const url = new URL(returnTo, request.nextUrl.origin);
+  const url = new URL(safeReturnTo(returnTo, request.nextUrl.origin), request.nextUrl.origin);
   url.searchParams.set("error", message);
   return NextResponse.redirect(url);
 }
@@ -54,5 +55,6 @@ export async function GET(request: NextRequest) {
     followers: user.public_metrics?.followers_count ?? null,
   });
   await setSession(user.id, user.username);
-  return NextResponse.redirect(new URL(saved.returnTo, request.nextUrl.origin));
+  // Checked again here: a cookie written before this check existed could still hold an off-site path.
+  return NextResponse.redirect(new URL(safeReturnTo(saved.returnTo, request.nextUrl.origin), request.nextUrl.origin));
 }

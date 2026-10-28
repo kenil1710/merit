@@ -1,6 +1,7 @@
 "use client";
 
 import type { Keypair } from "@rialo/ts-cdk";
+import { base58 } from "@scure/base";
 import { Droplets } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -51,7 +52,10 @@ export function FaucetButton({ keypair, disabled, onFunded, size = "default" }: 
         onClick={async () => {
           setBusy(true);
           try {
-            await relayClient().requestAirdropAndConfirm(keypair.publicKey, FAUCET_MAX_KELVIN);
+            // DevNet can take well over the SDK's default few seconds to run an airdrop: wait up to a minute.
+            const client = relayClient();
+            const signature = await client.requestAirdrop(keypair.publicKey, FAUCET_MAX_KELVIN);
+            await client.confirmTransaction(base58.encode(signature), { maxRetries: 60, retryDelayMs: 1000 });
             await onFunded();
             toast.success("1 DevNet RLO received");
           } catch (e) {

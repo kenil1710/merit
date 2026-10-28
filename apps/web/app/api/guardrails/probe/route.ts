@@ -8,7 +8,7 @@ import { getDb } from "@/lib/db";
 import { configured, env } from "@/lib/server/env";
 import { jsonError, readJson, sameOrigin } from "@/lib/server/http";
 import { PROBES, liveCampaign, runProbe, type ProbeKey } from "@/lib/server/latch-probes";
-import { allow, clientKey } from "@/lib/server/rate-limit";
+import { allow, ipKey, rule } from "@/lib/server/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ const Body = z.object({ probe: z.enum(Object.keys(PROBES) as [ProbeKey, ...Probe
 
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);
-  if (!allow(`probe:${clientKey(request)}`, 10, 60_000) || !allow("probe:all", 60, 60_000)) return jsonError("Too many probes. Wait a minute.", 429);
+  if (!(await allow(rule(`probe:${ipKey(request)}`, 10, 60_000), rule("probe:all", 60, 60_000)))) return jsonError("Too many probes. Wait a minute.", 429);
   const body = Body.safeParse(await readJson(request));
   if (!body.success) return jsonError("Unknown probe.", 400);
   const probe = PROBES[body.data.probe];
