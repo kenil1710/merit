@@ -3,6 +3,7 @@
 import { Check, Copy, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const shortHex = (value: string, head = 6, tail = 4) =>
@@ -15,9 +16,11 @@ export function HexValue({ value, href, label, head, tail }: { value: string; hr
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
+      toast.success(`Copied ${label}`, { description: shortHex(value, 10, 8), duration: 1800 });
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard unavailable: the full value is still in the tooltip */
+      // Clipboard unavailable (an insecure page or a denied permission): say so; the full value is in the tooltip.
+      toast.error("Couldn't copy: your browser blocked the clipboard. Hover to see the full value.");
     }
   }
   const short = shortHex(value, head, tail);
@@ -38,7 +41,7 @@ export function HexValue({ value, href, label, head, tail }: { value: string; hr
       <button
         type="button"
         onClick={copy}
-        aria-label={`Copy ${label}`}
+        aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
         className="text-muted-foreground hover:text-foreground -my-1 inline-flex size-6 items-center justify-center rounded transition-colors duration-150"
       >
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}

@@ -1,9 +1,10 @@
 "use client";
 
 import { PublicKey } from "@rialo/ts-cdk";
-import { Droplets, Rocket } from "lucide-react";
+import { Rocket } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { FaucetButton } from "@/components/faucet-button";
 import { HexValue } from "@/components/hex-value";
 import { Notice } from "@/components/ui-kit";
 import { Stepper, type StepStatus } from "@/components/ui-kit/stepper";
@@ -12,7 +13,6 @@ import { useOwnerWallet } from "@/lib/client/owner-wallet";
 import { recordChainEvent } from "@/lib/client/chain-event";
 import { relayClient, sendInstruction, signMessage } from "@/lib/client/wallet";
 import { hex, unhex } from "@/lib/merit/codec";
-import { FAUCET_MAX_KELVIN } from "@/lib/merit/constants";
 import { ix, type CampaignConfig } from "@/lib/merit/instructions";
 import { campaignMessage } from "@/lib/merit/messages";
 import { randomSlug } from "@/lib/merit/pda";
@@ -64,7 +64,6 @@ export function GoLive({ program, onLive }: { program: GoLiveProgram; onLive?: (
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<bigint | null>(null);
-  const [faucet, setFaucet] = useState(false);
   const notified = useRef(false);
   const planned = BigInt(program.plannedEscrow) + BigInt(program.plannedOps);
 
@@ -214,29 +213,10 @@ export function GoLive({ program, onLive }: { program: GoLiveProgram; onLive?: (
               <span className="mono-num font-medium">{balance === null ? "…" : rlo(balance)}</span>
               <span className="text-muted-foreground"> · needs about {rlo(planned + RENT_ALLOWANCE)}</span>
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={faucet || running}
-              onClick={async () => {
-                setFaucet(true);
-                try {
-                  await relayClient().requestAirdropAndConfirm(keypair.publicKey, FAUCET_MAX_KELVIN);
-                  await refreshBalance();
-                  toast.success("1 DevNet RLO received");
-                } catch (e) {
-                  setError((e as Error).message);
-                } finally {
-                  setFaucet(false);
-                }
-              }}
-            >
-              <Droplets className="size-4" />
-              {faucet ? "Requesting…" : "Get 1 DevNet RLO"}
-            </Button>
+            <FaucetButton keypair={keypair} size="sm" disabled={running} onFunded={refreshBalance} />
           </div>
           {short ? <Notice tone="warning">The wallet holds less than the escrow and operations budget you planned. Use the faucet first.</Notice> : null}
-          <Button size="lg" className="h-11 w-fit px-5 text-[15px]" disabled={running || short || faucet} onClick={run}>
+          <Button size="lg" className="h-11 w-fit px-5 text-[15px]" disabled={running || short} onClick={run}>
             <Rocket className="size-4" />
             {running ? "Signing on Rialo…" : status.current === "create" ? "Sign and go live" : "Continue going live"}
           </Button>

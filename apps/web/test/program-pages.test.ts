@@ -117,7 +117,7 @@ describe("rounds, metrics and the public record", () => {
   it("merges database rounds with the chain's, and the open round's status", async () => {
     const { db, program } = await setup();
     const state = { round: 2n, phase: 1n, paused: false, roundStartMs: BigInt(NOW - 60_000), roundEndMs: BigInt(NOW + 60_000), submitGraceMs: 300_000n, roundLengthMs: 1_800_000n } as MeritState;
-    const view = { rounds: [{ round: 2, decisions: [] }, { round: 1, ledger: "L", decisions: [{ tx: { payout: "sig", payoutLine: "Merit paid 70000000 kelvin to w for post 1 (round 1)" }, amountKelvin: "70000000", status: "Verified" }] }] } as never;
+    const view = { rounds: [{ round: 2, decisions: [] }, { round: 1, ledger: "L", decisions: [{ paid: true, settled: true, tx: { payout: "sig", payoutLine: "Merit paid 70000000 kelvin to w for post 1 (round 1)" }, amountKelvin: "70000000", status: "Verified" }] }] } as never;
     const rows = await pages.roundRows(db, program.id, view, state);
     expect(rows.map((r) => [r.number, r.status, r.submissions, r.paid])).toEqual([
       [2, "open", 0, "0"],

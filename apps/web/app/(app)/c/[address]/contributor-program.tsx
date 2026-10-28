@@ -13,6 +13,7 @@ import { perfectPayout, rlo } from "@/lib/program-math";
 import { contributorView } from "@/lib/server/contributor-view";
 import { accountOf, membership, publicProgram, userByX } from "@/lib/server/contributors";
 import { getSession } from "@/lib/server/session";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 const utc = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
 
@@ -27,16 +28,16 @@ export async function ContributorProgram({ slug }: { slug: string }) {
   if (!me) redirect(`/join/${program.slug}`);
   const [view, user] = await Promise.all([contributorView(db, program, me), userByX(db, session.xUserId)]);
   const c = view.campaign;
-  const open = c?.phaseCode === 1;
-  const ended = !!program.endedAt || (c?.phaseCode ?? 0) >= 4;
+  const open = c?.status.state === "open";
+  const ended = !!program.endedAt || isEndedPhase(c?.phaseCode ?? 0);
   const minimums = minimumStatus(program, accountOf(user), new Date(), true);
   const closed = ended
     ? "This campaign has ended. Verified work from its last round is still paid."
-    : !open
-      ? c?.phaseCode === 2
-        ? "The round is closing and paying out. The next one opens in a moment."
-        : c?.phaseCode === 3
-          ? "This round is waiting for the team to add funds."
+    : !open && !c?.status.takesSubmissions
+      ? c
+        ? `${c.status.text}.`
+        : view.chainError
+          ? "Rialo DevNet didn't answer, so the round status is unknown."
           : "No round is open right now."
       : null;
   const best = program.rubricJson.categories.reduce((m, k) => (perfectPayout(k.maxPoints, program.ratePerPoint) > m ? perfectPayout(k.maxPoints, program.ratePerPoint) : m), 0n);
@@ -56,7 +57,7 @@ export async function ContributorProgram({ slug }: { slug: string }) {
           <p className="mt-4">
             <span className="bg-card shadow-soft inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm">
               <span aria-hidden="true" className={`size-2 rounded-full ${open ? "bg-success" : "bg-muted-foreground/50"}`} />
-              {open ? `Round ${c.round.number} closes ${utc(c.round.endMs)}` : ended ? "Campaign ended" : `Round ${c.round.number} · ${c.phase}`}
+              {open ? `Round ${c.round.number} closes ${utc(c.round.endMs)}` : ended ? "Campaign ended" : c.status.text}
             </span>
           </p>
         ) : null}

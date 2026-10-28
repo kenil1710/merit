@@ -17,6 +17,7 @@ import { controlsState, programSummary } from "@/lib/server/program-summary";
 import { getProgramForMember, listMembers } from "@/lib/server/programs";
 import { getOwnerSession } from "@/lib/server/session";
 import { minutesLabel } from "@/lib/when";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -49,7 +50,7 @@ export default async function ProgramOverview({ params }: Props) {
         description={p.description}
         meta={
           <span className="inline-flex flex-wrap items-center gap-2">
-            <ProgramStatus status={p.status} ended={!!p.endedAt || (state?.phase ?? 0n) >= 4n} />
+            <ProgramStatus status={p.status} ended={!!p.endedAt || isEndedPhase(state?.phase ?? 0n)} />
             {state ? <StatusBadge status={phaseStatus(Number(state.phase))} /> : null}
             <span className="text-muted-foreground font-mono text-xs">/join/{p.slug}</span>
             {role === "reviewer" ? <span className="text-muted-foreground text-xs">· you review this program</span> : null}

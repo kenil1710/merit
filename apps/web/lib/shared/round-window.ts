@@ -79,3 +79,64 @@ export function lateMessage(c: RoundClock, postAt: Date | null, now = Date.now()
   }
   return null;
 }
+
+export type RoundState = "open" | "closing" | "paying" | "waiting_funds" | "awaiting_owner" | "paused" | "idle" | "ended";
+
+export type RoundStatus = {
+  state: RoundState;
+  /** The campaign's current round number on chain. */
+  round: number;
+  startsAt: Date;
+  endsAt: Date;
+  /** Whether /api/submit can take work now (the open round, or a closed one inside its grace for posts written in it). */
+  takesSubmissions: boolean;
+  /** When the next round is expected to open (settlement starts after the grace, then takes a few steps); null when it waits on a person. */
+  nextOpensAt: Date | null;
+  /** One line for a contributor, in UTC. */
+  text: string;
+};
+
+/** Settlement's steps (peek, pay, reimburse, open) run SETTLE_STEP_MS apart; allow a little more than that. */
+const SETTLE_SLACK_MS = 60_000;
+/** Past this, settlement is late (DevNet slow, or the timer needs a resume): no next-open time is promised. */
+const STALLED_MS = 10 * 60_000;
+
+/**
+ * Where a campaign's round clock stands, read from its on-chain state. /join, Explore, a program's join page and the
+ * contributor view all use this one reading, so they never disagree on whether a round is open. Between two rounds the
+ * campaign sits in Settling for the grace plus a few steps; that is not "no round", it is the next one about to open.
+ */
+export function roundStatus(c: RoundClock, now = Date.now()): RoundStatus {
+  const round = Number(c.round);
+  const startsAt = new Date(Number(c.roundStartMs));
+  const endsAt = new Date(Number(c.roundEndMs));
+  const grace = effectiveGraceMs(c);
+  const base = { round, startsAt, endsAt };
+  if (c.phase === 4n || c.phase === 5n) return { ...base, state: "ended", takesSubmissions: false, nextOpensAt: null, text: "Campaign ended" };
+  if (c.phase === 0n) return { ...base, state: "idle", takesSubmissions: false, nextOpensAt: null, text: "No round scheduled: the campaign is idle until the owner funds it" };
+  if (c.phase === 3n) return { ...base, state: "waiting_funds", takesSubmissions: false, nextOpensAt: null, text: `Round ${round} is waiting for the owner to add funds` };
+  if (c.phase === 6n) return { ...base, state: "awaiting_owner", takesSubmissions: false, nextOpensAt: null, text: `Round ${round} is waiting for the owner's approval to pay` };
+  if (c.paused) return { ...base, state: "paused", takesSubmissions: false, nextOpensAt: null, text: `Round ${round} is paused by the owner` };
+  if (c.phase === OPEN && now < endsAt.getTime()) {
+    return { ...base, state: "open", takesSubmissions: true, nextOpensAt: null, text: `Round ${round} is open until ${hhmm(endsAt)}` };
+  }
+  // Closed: the heartbeat has stopped (or is about to) and settlement waits for the grace, then pays and opens the next round.
+  const settleAt = endsAt.getTime() + grace;
+  const nextOpensAt = new Date(Math.max(settleAt, now) + SETTLE_SLACK_MS);
+  if (now < settleAt) {
+    return {
+      ...base,
+      state: "closing",
+      takesSubmissions: grace > 0,
+      nextOpensAt,
+      text: `Round ${round} closed at ${hhmm(endsAt)} and pays out next. Round ${round + 1} opens at about ${hhmm(nextOpensAt)}`,
+    };
+  }
+  if (now > settleAt + STALLED_MS) {
+    return { ...base, state: "paying", takesSubmissions: false, nextOpensAt: null, text: `Round ${round} is still settling (it was due by ${hhmm(new Date(settleAt + SETTLE_SLACK_MS))})` };
+  }
+  return { ...base, state: "paying", takesSubmissions: false, nextOpensAt, text: `Round ${round} is paying out. Round ${round + 1} opens at about ${hhmm(nextOpensAt)}` };
+}
+
+/** Ended or refunded (phase 4 or 5). Phase 6, waiting for the owner's approval, is not ended. */
+export const isEndedPhase = (phase: bigint | number) => phase === 4n || phase === 5n || phase === 4 || phase === 5;

@@ -7,7 +7,7 @@ import { shortHex } from "@/components/hex-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createWallet, savedAddress, signMessage, unlockWallet } from "@/lib/client/wallet";
+import { createWallet, errorAfterEdit, savedAddress, signMessage, unlockWallet } from "@/lib/client/wallet";
 
 /**
  * Join with the Rialo wallet in this browser: unlock it (or create one), sign the join message naming your X account
@@ -61,7 +61,10 @@ export function JoinWallet({ slug }: { slug: string }) {
           autoComplete={address ? "current-password" : "new-password"}
           placeholder={address ? "Passphrase to unlock" : "8+ characters"}
           value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
+          onChange={(e) => {
+            setPassphrase(e.target.value);
+            setError((err) => errorAfterEdit(err, e.target.value, !address));
+          }}
           className="h-10"
         />
       </div>

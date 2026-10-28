@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DecisionsTable } from "@/components/campaign/decisions";
+import { DecisionRounds } from "@/components/campaign/decisions";
 import { HexValue } from "@/components/hex-value";
 import { KelvinText } from "@/components/kelvin-text";
 import { phaseStatus, StatusBadge } from "@/components/status-badge";
-import { Card, EmptyState, PageHeader, Section, Stat } from "@/components/ui-kit";
+import { Card, PageHeader, Section, Stat } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { formatRlo, REX_COST_KELVIN } from "@/lib/merit/constants";
 import type { CampaignView } from "@/lib/server/campaign-view";
@@ -40,7 +40,7 @@ function activityKind(line: string): { label: string; tone: string } {
  * A campaign's public record from the chain: rules, books, every round's decisions with the judge's reasons and REX
  * proof, and recent activity. `/p/[slug]` shows it for a program; `/c/[address]` for campaigns without one.
  */
-export function CampaignRecord({ view, joinHref = "/join", roundHref, extra }: { view: CampaignView; joinHref?: string; roundHref?: (n: number) => string; extra?: ReactNode }) {
+export function CampaignRecord({ view, joinHref = "/join", roundBase, extra }: { view: CampaignView; joinHref?: string; roundBase?: string; extra?: ReactNode }) {
   const { config, books, round } = view;
   const verificationsLeft = Number(BigInt(books.ops) / REX_COST_KELVIN);
   const decisions = view.rounds.reduce((n, r) => n + r.decisions.length, 0);
@@ -53,7 +53,7 @@ export function CampaignRecord({ view, joinHref = "/join", roundHref, extra }: {
         meta={<StatusBadge status={phaseStatus(view.phaseCode)} />}
         description={view.meta?.brief}
         actions={
-          view.phaseCode === 1 ? (
+          view.status.state === "open" || view.status.state === "closing" || view.status.state === "paying" ? (
             <Button asChild>
               <Link href={joinHref}>
                 Contribute <ArrowRight className="size-3.5" />
@@ -108,31 +108,7 @@ export function CampaignRecord({ view, joinHref = "/join", roundHref, extra }: {
       </div>
 
       <Section title="Decisions" description="Open a row for the judge's reasons, the validators' REX proof and every transaction.">
-        <div className="grid gap-8">
-          {view.rounds.map((r) => (
-            <div key={r.round} className="grid gap-3">
-              <div className="flex flex-wrap items-baseline gap-3">
-                <h3 className="font-medium">
-                  {roundHref ? (
-                    <Link href={roundHref(r.round)} className="underline-offset-4 hover:underline">
-                      Round {r.round}
-                    </Link>
-                  ) : (
-                    `Round ${r.round}`
-                  )}
-                </h3>
-                {r.ledger ? (
-                  <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">ledger <HexValue value={r.ledger} label="round ledger" /></span>
-                ) : null}
-              </div>
-              {r.decisions.length ? (
-                <DecisionsTable decisions={r.decisions} round={r.round} />
-              ) : (
-                <EmptyState className="py-8">No submission was approved in round {r.round}.</EmptyState>
-              )}
-            </div>
-          ))}
-        </div>
+        <DecisionRounds rounds={view.rounds} roundBase={roundBase} />
       </Section>
 
       {extra}

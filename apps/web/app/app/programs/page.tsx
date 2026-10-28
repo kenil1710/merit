@@ -7,6 +7,7 @@ import { programSummaries, type ProgramSummary } from "@/lib/server/program-summ
 import { programsForMember } from "@/lib/server/programs";
 import { getOwnerSession } from "@/lib/server/session";
 import { cn } from "@/lib/utils";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 export const metadata = { title: "All programs" };
 
@@ -18,7 +19,7 @@ const FILTERS = [
 ] as const;
 type Filter = (typeof FILTERS)[number][0];
 
-const ended = (s: ProgramSummary) => !!s.program.endedAt || (s.state?.phase ?? 0n) >= 4n;
+const ended = (s: ProgramSummary) => !!s.program.endedAt || isEndedPhase(s.state?.phase ?? 0n);
 const MATCH: Record<Filter, (s: ProgramSummary) => boolean> = {
   all: () => true,
   draft: (s) => s.program.status === "draft",

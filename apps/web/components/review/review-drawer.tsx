@@ -50,7 +50,7 @@ function journey(d: Detail): Step[] {
       icon: FileCheck2,
     },
     { key: "verified", label: "Verified by validators (REX)", status: chain?.status === "Verified" ? "done" : failed ? "failed" : onChain ? "current" : "waiting", icon: ShieldCheck },
-    { key: "paid", label: d.submission.waitingForFunds ? "Waiting for funds" : "Paid when the round closes", status: s === "paid" || chain?.tx.payout ? "done" : d.submission.waitingForFunds ? "current" : "waiting", icon: Wallet },
+    { key: "paid", label: d.submission.waitingForFunds ? "Waiting for funds" : "Paid when the round closes", status: s === "paid" || chain?.paid ? "done" : d.submission.waitingForFunds ? "current" : "waiting", icon: Wallet },
   ];
 }
 

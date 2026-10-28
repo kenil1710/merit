@@ -38,8 +38,8 @@ export default async function RoundReceipt({ params }: Params) {
   if (!row) notFound();
   const chain = view.rounds.find((r) => r.round === number);
   const decisions = chain?.decisions ?? [];
-  const paid = decisions.filter((d) => d.tx.payout);
-  const unpaid = decisions.filter((d) => !d.tx.payout);
+  const paid = decisions.filter((d) => d.paid);
+  const unpaid = decisions.filter((d) => !d.paid);
   const current = number === Number(state.round);
   return (
     <div className="grid gap-8">
@@ -72,10 +72,10 @@ export default async function RoundReceipt({ params }: Params) {
         {paid.length ? (
           <ul className="bg-card shadow-soft divide-y rounded-[20px]" data-testid="receipt-payouts">
             {paid.map((d) => (
-              <li key={d.tx.payout} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+              <li key={d.postId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
                 <span>{d.xUsername ? `@${d.xUsername}` : <HexValue value={d.contributor} label="wallet" head={6} tail={4} />} · post …{d.postId.slice(-6)}</span>
                 <span className="text-success font-mono tabular-nums">{rloText(/Merit paid (\d+) kelvin/.exec(d.tx.payoutLine ?? "")?.[1] ?? d.amountKelvin)}</span>
-                <HexValue value={d.tx.payout!} href={`/tx/${d.tx.payout}`} label="payout" head={8} tail={0} />
+                {d.tx.payout ? <HexValue value={d.tx.payout} href={`/tx/${d.tx.payout}`} label="payout" head={8} tail={0} /> : <span className="text-muted-foreground text-xs">paid</span>}
               </li>
             ))}
           </ul>

@@ -8,6 +8,7 @@ import type { MeritState } from "@/lib/merit/state";
 import { audit, schema, type Db } from "@/lib/db";
 import { contextHash, contextInputHash } from "@/lib/shared/context";
 import { onChainRate, toStoredLimits, type ProgramInput } from "@/lib/shared/program";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 /**
  * Programs and their members. A program is a draft in the database until its owner creates the campaign on Rialo,
@@ -218,7 +219,7 @@ export function publishBlocker(program: Program, state: MeritState | null, now =
     state.capPerRound !== want.capPerRound ||
     state.roundLengthMs !== want.roundLengthMs;
   if (mismatch) return "The campaign on chain doesn't match this program's rules.";
-  if (state.phase >= 4n || state.ending) return "The campaign on chain has ended.";
+  if (isEndedPhase(state.phase) || state.ending) return "The campaign on chain has ended.";
   if (state.totalFunded === 0n) return "Fund the escrow first.";
   if (state.round === 0n && program.firstRoundStartsAt.getTime() <= now) return "Open round 1 first.";
   return null;

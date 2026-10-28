@@ -80,3 +80,18 @@ export async function usageByCampaign(db: Db, since: Date, pricing: ModelPricing
   return [...out.values()].sort((a, b) => b.judge.calls + b.x.calls - (a.judge.calls + a.x.calls));
 }
 
+
+/** A campaign tag as people read it: owner-<user id> is an owner's "Read it", made before any campaign exists. */
+export function usageLabel(u: Pick<CampaignUsage, "campaign" | "name">): string {
+  if (u.name) return u.name;
+  return u.campaign.startsWith("owner-") ? "Owner · Read it (no campaign yet)" : "Campaign";
+}
+
+/** One latch's totals across campaigns (merit-judge's spend is what Merit's log prices, to the hundredth of a cent). */
+export function latchTotals(usage: CampaignUsage[], latch: "merit-judge" | "merit-x"): { calls: number; cents: number } {
+  const side = (u: CampaignUsage) => (latch === "merit-judge" ? u.judge : u.x);
+  return { calls: usage.reduce((n, u) => n + side(u).calls, 0), cents: latch === "merit-judge" ? usage.reduce((n, u) => n + u.judge.cents, 0) : 0 };
+}
+
+/** The start of the current UTC day: "Today" everywhere on Guardrails means since 00:00 UTC. */
+export const startOfUtcDay = (now = Date.now()) => new Date(new Date(now).toISOString().slice(0, 10) + "T00:00:00Z");

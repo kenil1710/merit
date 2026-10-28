@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Loader2, Sparkles, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,14 @@ import { ABOUT_PLACEHOLDER, contextPayload, type ContextDraft, type Understandin
 import { CONTEXT_ABOUT_MIN } from "@/lib/shared/context";
 
 type Source = { url: string; ok: boolean; title?: string | null; note?: string | null };
+
+const READ_TIMEOUT_MS = 25_000;
+
+/** What "Read it" is doing, by how long it has run: links first (in parallel, up to 8 s), then the agent. */
+export function readingText(seconds: number, links: number): string {
+  const phase = links > 0 && seconds < 8 ? `Reading ${links} link${links === 1 ? "" : "s"}…` : seconds < 15 ? "Asking the agent…" : "Almost done…";
+  return `${phase} ${seconds}s`;
+}
 
 /**
  * Context for the agent: what the program is about (required), links it reads once, and what every post must include.
@@ -30,18 +38,30 @@ export function ContextEditor({
   const id = (s: string) => `${idPrefix}-${s}`;
   const u = value.understanding;
   const [reading, setReading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!reading) return;
+    setElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [reading]);
   const [readError, setReadError] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const tooShort = value.about.trim().length < CONTEXT_ABOUT_MIN;
   async function read() {
     setReading(true);
     setReadError(null);
+    // The server answers within 20 s; past READ_TIMEOUT_MS something between here and it is stuck, so stop waiting.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), READ_TIMEOUT_MS);
     try {
       const p = contextPayload(value);
       const res = await fetch("/api/owner/context/read", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ about: p.about, links: p.links, mustInclude: p.mustInclude }),
+        signal: abort.signal,
       });
       const body = (await res.json()) as { understanding?: { summary: string; keyFacts: string[]; onTopic: string[]; offTopic: string[] } | null; sources?: Source[]; error?: string | null };
       setSources(body.sources ?? []);
@@ -49,11 +69,13 @@ export function ContextEditor({
       const x = body.understanding;
       onChange({ understanding: { summary: x.summary, keyFacts: x.keyFacts.join("\n"), onTopic: x.onTopic.join("\n"), offTopic: x.offTopic.join("\n") } });
     } catch (e) {
-      setReadError((e as Error).message);
+      setReadError(abort.signal.aborted ? `Read it timed out after ${READ_TIMEOUT_MS / 1000} seconds. Try again, or write the summary yourself.` : (e as Error).message);
     } finally {
+      clearTimeout(timer);
       setReading(false);
     }
   }
+  const linkCount = contextPayload(value).links.filter((l) => !l.startsWith("@")).length;
   const setU = (patch: Partial<UnderstandingDraft>) => onChange({ understanding: { ...(u ?? { summary: "", keyFacts: "", onTopic: "", offTopic: "" }), ...patch } });
   return (
     <div className="grid gap-6">
@@ -85,7 +107,7 @@ export function ContextEditor({
             {reading ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                Reading…
+                <span aria-live="polite">{readingText(elapsed, linkCount)}</span>
               </>
             ) : u ? (
               "Read again"

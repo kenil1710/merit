@@ -87,6 +87,8 @@ async function list<T>(kind: Kind): Promise<T[]> {
 export const store = {
   judgement: (postId: string) => read<StoredJudgement>("judgements", postId),
   saveJudgement: (postId: string, value: StoredJudgement) => write("judgements", postId, value),
+  /** Only for a record that doesn't match the hash its ledger entry carries: the chain decides which record is right. */
+  replaceJudgement: (postId: string, value: StoredJudgement) => write("judgements", postId, value, { overwrite: true }),
   link: (xUserId: string) => read<WalletLink>("links", xUserId),
   saveLink: (value: WalletLink) => write("links", value.xUserId, value, { overwrite: true }),
   campaign: (address: string) => read<CampaignMeta>("campaigns", address),

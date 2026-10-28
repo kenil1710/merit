@@ -14,7 +14,7 @@ import type { Program } from "./programs";
  * the database and the chain. On-chain numbers are the source of truth; the database adds who and why.
  */
 
-const paidOf = (d: DecisionView) => (d.tx.payout ? BigInt(/Merit paid (\d+) kelvin/.exec(d.tx.payoutLine ?? "")?.[1] ?? d.amountKelvin) : 0n);
+const paidOf = (d: DecisionView) => (d.paid ? BigInt(/Merit paid (\d+) kelvin/.exec(d.tx.payoutLine ?? "")?.[1] ?? d.amountKelvin) : 0n);
 
 // ─── Contributors ───────────────────────────────────────────────────────────
 
@@ -153,7 +153,7 @@ export async function roundRows(db: Db, programId: string, view: CampaignView | 
       const local = dbRounds.find((r) => r.number === number);
       const decisions = chain?.decisions ?? [];
       const paid = decisions.reduce((t, d) => t + paidOf(d), 0n);
-      const owed = decisions.filter((d) => !d.tx.payout && (d.status === "Verified" || d.status === "Verifying")).reduce((t, d) => t + BigInt(d.amountKelvin), 0n);
+      const owed = decisions.filter((d) => !d.paid && (d.status === "Verified" || d.status === "Verifying")).reduce((t, d) => t + BigInt(d.amountKelvin), 0n);
       const isCurrent = number === current && state;
       return {
         number,

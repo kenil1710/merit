@@ -1,5 +1,6 @@
 // Owner: "Read it". The agent reads the program's text and links once and drafts what it understood, for the owner
-// to check and edit before saving. Runs in the request (a few seconds); every model call goes through merit-judge.
+// to check and edit before saving. Runs in the request: links in parallel, one model call, all within 20 seconds
+// (READ_DEADLINE_MS); every model call goes through merit-judge.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { readContext } from "@/lib/agent/context";
@@ -12,7 +13,7 @@ import { pageText, safeFetchHtml } from "@/lib/server/safe-fetch";
 import { getOwnerSession } from "@/lib/server/session";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request)) return jsonError("bad_origin", 403);

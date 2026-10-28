@@ -117,11 +117,11 @@ export async function contributorView(db: Db, program: Program, contributor: Con
     else if (s.status === "escalated") shown = "with_team";
     else if (s.status === "pending" || s.status === "processing") shown = "reviewing";
     else if (!d) shown = "verifying";
-    else if (d.tx.payout) shown = "paid";
+    else if (d.paid) shown = "paid";
     else if (d.status === "Failed verification" || d.status === "Inconclusive") shown = "failed";
     else if (d.status === "Verified") shown = campaign?.phaseCode === 3 && hit!.round === campaign.round.number ? "waiting_funds" : "verified";
     else shown = "verifying";
-    const amount = d ? (d.tx.payout ? paidKelvin(d) : BigInt(d.amountKelvin)) : s.amount;
+    const amount = d ? (d.paid ? paidKelvin(d) : BigInt(d.amountKelvin)) : s.amount;
     return {
       id: s.id,
       url: s.url,

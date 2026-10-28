@@ -1,12 +1,11 @@
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { phaseStatus, StatusBadge } from "@/components/status-badge";
+import { roundBadge, StatusBadge } from "@/components/status-badge";
 import { EmptyState, PageHeader } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
-import { RpcClient, listCampaigns } from "@/lib/merit/chain";
-import { RPC_UPSTREAM, formatRlo } from "@/lib/merit/constants";
-import { store } from "@/lib/server/store";
+import { formatRlo } from "@/lib/merit/constants";
+import { namedCampaigns } from "@/lib/server/live-campaigns";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Explore campaigns" };
@@ -15,15 +14,11 @@ const left = (endMs: number) => {
   const m = Math.max(0, Math.round((endMs - Date.now()) / 60_000));
   return m >= 120 ? `in ${Math.round(m / 60)} h` : m > 0 ? `in ${m} min` : "now";
 };
+const hhmm = (d: Date) => `${d.toISOString().slice(11, 16)} UTC`;
 
 /** Every campaign with a published name and brief, read live from the program's accounts. */
 export default async function Explore() {
-  const [onChain, metas] = await Promise.all([listCampaigns(new RpcClient(RPC_UPSTREAM)), store.campaigns()]);
-  const named = new Map(metas.map((m) => [m.address, m]));
-  const campaigns = onChain
-    .filter((c) => named.has(c.address))
-    .sort((a, b) => Number(b.phase === 1n) - Number(a.phase === 1n) || Number(b.roundStartMs - a.roundStartMs));
-  const unnamed = onChain.length - campaigns.length;
+  const { campaigns, unnamed } = await namedCampaigns();
 
   return (
     <div className="grid content-start gap-10">
@@ -37,12 +32,12 @@ export default async function Explore() {
         </EmptyState>
       ) : (
         <ul aria-label="Campaigns" className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {campaigns.map((c) => {
-            const meta = named.get(c.address)!;
-            const open = c.phase === 1n;
+          {campaigns.map(({ state: c, meta, status }) => {
+            const open = status.state === "open";
+            const between = status.state === "closing" || status.state === "paying";
             return (
               <li key={c.address} className="bg-card shadow-soft flex flex-col rounded-[20px] p-6" data-testid="campaign-card">
-                <StatusBadge status={phaseStatus(Number(c.phase))} className="mb-3 self-start" />
+                <StatusBadge status={roundBadge(status.state)} className="mb-3 self-start" />
                 <h2 className="display text-[1.625rem] leading-tight [overflow-wrap:anywhere]">{meta.name}</h2>
                 <p className="text-soft mt-2 line-clamp-3 text-sm leading-relaxed">{meta.brief}</p>
                 <div className="mt-5">
@@ -54,8 +49,10 @@ export default async function Explore() {
                 </div>
                 <dl className="mt-5 grid grid-cols-3 gap-x-3 border-t pt-4 text-sm">
                   <div>
-                    <dt className="text-muted-foreground text-xs">{open ? `Round ${c.round} closes` : "Rounds"}</dt>
-                    <dd className="mt-0.5">{open ? left(Number(c.roundEndMs)) : c.round.toString()}</dd>
+                    <dt className="text-muted-foreground text-xs">{open ? `Round ${c.round} closes` : between ? `Round ${status.round + 1} opens` : "Rounds"}</dt>
+                    <dd className="mt-0.5" data-testid="card-round">
+                      {open ? left(Number(c.roundEndMs)) : between ? (status.nextOpensAt ? `≈ ${hhmm(status.nextOpensAt)}` : "soon") : c.round.toString()}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground text-xs">Escrow</dt>
@@ -70,7 +67,7 @@ export default async function Explore() {
                   <Link href={`/c/${c.address}`} className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline">
                     Decisions and payouts
                   </Link>
-                  {open ? (
+                  {open || between ? (
                     <Button asChild size="sm">
                       <Link href="/join" aria-label={`Contribute to ${meta.name}`}>
                         Contribute <ArrowRight className="size-3.5" aria-hidden="true" />

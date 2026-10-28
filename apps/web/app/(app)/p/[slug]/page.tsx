@@ -38,7 +38,7 @@ export default async function PublicProgramPage({ params }: Params) {
     <CampaignRecord
       view={{ ...view, meta: { address: view.address, owner: view.owner, slug: program.campaignSlugHex ?? "", createdAt: program.createdAt.toISOString(), ...view.meta, name: program.name, brief: program.description } }}
       joinHref={`/join/${program.slug}`}
-      roundHref={(n) => `/p/${program.slug}/rounds/${n}`}
+      roundBase={`/p/${program.slug}/rounds/`}
       extra={
         <Section title="Recent decisions" description="Every decision, not only approvals. Each is a signed record; approved ones also have their hash on chain.">
           {decisions.length ? (

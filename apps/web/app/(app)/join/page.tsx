@@ -7,33 +7,34 @@ import { getDb } from "@/lib/db";
 import { perfectPayout, rlo } from "@/lib/program-math";
 import { joinablePrograms } from "@/lib/server/contributors";
 import { PageSkeleton } from "@/components/ui-kit/skeletons";
-import { RpcClient, listCampaigns } from "@/lib/merit/chain";
-import { RPC_UPSTREAM } from "@/lib/merit/constants";
-import { store } from "@/lib/server/store";
+import { namedCampaigns } from "@/lib/server/live-campaigns";
 import { JoinFlow } from "./JoinFlow";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Contribute" };
 
 export default async function JoinPage() {
-  const [onChain, metas, programs] = await Promise.all([
-    listCampaigns(new RpcClient(RPC_UPSTREAM)),
-    store.campaigns(),
+  const [{ campaigns }, programs] = await Promise.all([
+    namedCampaigns(),
     getDb()
       .then(joinablePrograms)
       .catch(() => []),
   ]);
-  const names = new Map(metas.map((m) => [m.address, m]));
-  const open = onChain
-    .filter((c) => c.phase === 1n && names.has(c.address))
-    .map((c) => ({
-      address: c.address,
-      name: names.get(c.address)!.name,
-      brief: names.get(c.address)!.brief,
-      roundEndMs: Number(c.roundEndMs),
-      round: Number(c.round),
-      minScore: Number(c.minScore),
-      rateKelvin: c.rateKelvin.toString(),
+  // Every running campaign, open or between rounds: a campaign that is paying out says when its next round opens.
+  const live = campaigns
+    .filter(({ status }) => status.state !== "ended" && status.state !== "idle")
+    .map(({ state, meta, status }) => ({
+      address: state.address,
+      name: meta.name,
+      brief: meta.brief,
+      roundEndMs: Number(state.roundEndMs),
+      round: Number(state.round),
+      minScore: Number(state.minScore),
+      rateKelvin: state.rateKelvin.toString(),
+      state: status.state,
+      takesSubmissions: status.takesSubmissions,
+      nextOpensAtMs: status.nextOpensAt?.getTime() ?? null,
+      statusText: status.text,
     }));
   return (
     <div className="grid gap-8">
@@ -60,7 +61,7 @@ export default async function JoinPage() {
         </Section>
       ) : null}
       <Suspense fallback={<PageSkeleton stats={0} rows={4} />}>
-        <JoinFlow campaigns={open} />
+        <JoinFlow campaigns={live} />
       </Suspense>
     </div>
   );

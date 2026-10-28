@@ -1,4 +1,6 @@
 import { Card, Notice, Section } from "@/components/ui-kit";
+import type { CampaignUsage } from "@/lib/server/latch-usage";
+import { cents } from "./campaign-usage";
 import { cn } from "@/lib/utils";
 
 export type ChildLatchView = {
@@ -13,7 +15,11 @@ export type ChildLatchView = {
 const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`;
 
 /** Each campaign's own extended latch, read live with its own token: it inherits the parent's policy and only narrows it. */
-export function ChildLatches({ children: latches }: { children: ChildLatchView[] }) {
+export function ChildLatches({ children: latches, today, week }: { children: ChildLatchView[]; today: CampaignUsage[] | null; week: CampaignUsage[] | null }) {
+  const side = (list: CampaignUsage[] | null, c: ChildLatchView) => {
+    const u = list?.find((x) => x.campaign === c.campaign);
+    return u ? (c.latch === "merit-judge" ? u.judge : u.x) : list ? { calls: 0, cents: 0 } : null;
+  };
   return (
     <Section
       title="Campaign latches"
@@ -44,23 +50,25 @@ export function ChildLatches({ children: latches }: { children: ChildLatchView[]
                 <div className="grid gap-4 text-sm">
                   {!c.whoami.error && !extended ? <Notice tone="danger">This token is not an extended latch (chain depth 0). Use a child created with Extend.</Notice> : null}
                   {c.whoami.error ? <Notice tone="danger">{c.whoami.error}. Merit does not fall back to the parent for this campaign.</Notice> : null}
-                  <div className="bg-muted/50 rounded-xl p-4">
-                    <p className="label">Its own spend today</p>
-                    {c.budget.maxDailyCents !== undefined ? (
-                      <>
-                        <p className="mt-2">
-                          <span className="display text-2xl tabular-nums">{c.budget.currentDailySpendCents}¢</span>
-                          <span className="text-muted-foreground"> · chain depth {c.whoami.chainDepth}</span>
-                        </p>
-                        <p className="text-muted-foreground mt-2 text-xs">
-                          The budget endpoint shows {c.budget.maxDailyCents}¢; this latch&apos;s own daily cap is set in its pipeline and
-                          enforced by the proxy.
-                        </p>
-                      </>
+                  <div className="bg-muted/50 rounded-xl p-4" data-testid="child-usage">
+                    <p className="label">This campaign&apos;s calls (Merit&apos;s log, UTC)</p>
+                    {side(today, c) ? (
+                      <p className="mt-2">
+                        <span className="display text-2xl tabular-nums">{side(today, c)!.calls}</span>
+                        <span className="text-muted-foreground"> today · {side(week, c)?.calls ?? "?"} in 7 days</span>
+                        {c.latch === "merit-judge" ? <span className="text-muted-foreground"> · {cents((side(today, c) as { cents?: number }).cents ?? 0)} today</span> : null}
+                      </p>
                     ) : (
-                      <p className="text-soft mt-2">{c.budget.message ?? c.budget.error ?? "No budget"}.</p>
+                      <p className="text-soft mt-2">Merit&apos;s log isn&apos;t reachable right now.</p>
                     )}
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Chain depth {c.whoami.chainDepth ?? "?"}.{" "}
+                      {c.budget.maxDailyCents !== undefined
+                        ? `Latch's counter shows ${c.budget.currentDailySpendCents ?? 0}¢ of ${c.budget.maxDailyCents}¢ (whole cents; the child's own cap is set in its pipeline and enforced by the proxy).`
+                        : c.budget.message ?? c.budget.error ?? ""}
+                    </p>
                   </div>
+                  <p className="label -mb-2">Newest entries in Latch&apos;s audit log</p>
                   <ul className="grid gap-1 font-mono text-xs">
                     {c.audit.slice(0, 5).map((e, i) => (
                       <li key={i} className="flex justify-between gap-3">

@@ -5,6 +5,7 @@ import { Card, PageHeader } from "@/components/ui-kit";
 import { loadState } from "@/lib/merit/chain";
 import { rpc } from "@/lib/server/agent";
 import { memberProgram } from "@/lib/server/owner-page";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 export const metadata = { title: "Settings" };
 
@@ -26,7 +27,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ id: s
         <div className="grid gap-6">
           <Card title="Campaign on chain" description="Signed by your wallet.">
             {state && role === "owner" && p.campaignSlugHex ? (
-              <ChainSettings programId={p.id} owner={p.ownerWallet} slugHex={p.campaignSlugHex} roundMinutes={Math.round(Number(state.nextRoundLengthMs) / 60_000)} ended={state.phase >= 4n || state.ending} />
+              <ChainSettings programId={p.id} owner={p.ownerWallet} slugHex={p.campaignSlugHex} roundMinutes={Math.round(Number(state.nextRoundLengthMs) / 60_000)} ended={isEndedPhase(state.phase) || state.ending} />
             ) : (
               <p className="text-muted-foreground text-sm">{state ? "Only the owner signs these." : "Available once the campaign is live."}</p>
             )}

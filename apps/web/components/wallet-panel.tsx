@@ -1,16 +1,16 @@
 "use client";
 
 import type { Keypair } from "@rialo/ts-cdk";
-import { Droplets, KeyRound, Lock, Wallet } from "lucide-react";
+import { KeyRound, Lock, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { HexValue } from "@/components/hex-value";
 import { Card } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createWallet, forgetWallet, relayClient, savedAddress, unlockWallet } from "@/lib/client/wallet";
-import { FAUCET_MAX_KELVIN, formatRlo } from "@/lib/merit/constants";
+import { FaucetButton } from "@/components/faucet-button";
+import { createWallet, errorAfterEdit, forgetWallet, relayClient, savedAddress, unlockWallet } from "@/lib/client/wallet";
+import { formatRlo } from "@/lib/merit/constants";
 
 /** The embedded Rialo wallet: create, unlock, faucet. The key never leaves the browser. */
 export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair | null) => void; purpose: string }) {
@@ -104,7 +104,10 @@ export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair
                 autoComplete={address ? "current-password" : "new-password"}
                 placeholder={address ? "Passphrase to unlock" : "New passphrase (8+ characters)"}
                 value={passphrase}
-                onChange={(e) => setPassphrase(e.target.value)}
+                onChange={(e) => {
+                  setPassphrase(e.target.value);
+                  setError((err) => errorAfterEdit(err, e.target.value, !address));
+                }}
                 className="h-10"
               />
               <Button type="submit" className="h-10 px-4" disabled={!passphrase || Boolean(busy)}>
@@ -114,24 +117,7 @@ export function WalletPanel({ onChange, purpose }: { onChange: (keypair: Keypair
             </div>
           </form>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="h-10"
-              disabled={Boolean(busy)}
-              onClick={() =>
-                run("Requesting 1 RLO…", async () => {
-                  await relayClient().requestAirdropAndConfirm(keypair.publicKey, FAUCET_MAX_KELVIN);
-                  await refresh(keypair.publicKey.toString());
-                  toast.success("1 DevNet RLO received");
-                })
-              }
-            >
-              <Droplets className="size-4" />
-              {busy ?? "Get 1 DevNet RLO"}
-            </Button>
-            <span className="text-muted-foreground text-xs">Faucet capped at 1 RLO per request.</span>
-          </div>
+          <FaucetButton keypair={keypair} disabled={Boolean(busy)} onFunded={() => refresh(keypair.publicKey.toString())} />
         )}
 
         {address && !keypair ? (

@@ -11,7 +11,8 @@ import { getDb, schema } from "@/lib/db";
 import { configured, env } from "@/lib/server/env";
 import { childLatches, latchSelf, type LatchName } from "@/lib/server/latch";
 import { PROBES, liveCampaign, pipelineSnapshot, type ProbeKey, type Snapshot } from "@/lib/server/latch-probes";
-import { usageByCampaign, type CampaignUsage, type ModelPricing } from "@/lib/server/latch-usage";
+import { cents } from "@/components/guardrails/campaign-usage";
+import { latchTotals, startOfUtcDay, usageByCampaign, type CampaignUsage, type ModelPricing } from "@/lib/server/latch-usage";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -61,8 +62,8 @@ function Pill({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   );
 }
 
-async function campaignUsage(window: "today" | "7d", pricing: ModelPricing): Promise<CampaignUsage[] | null> {
-  const since = window === "7d" ? new Date(Date.now() - 7 * 86_400_000) : new Date(new Date().toISOString().slice(0, 10));
+async function campaignUsage(window: "today" | "7d", pricing: ModelPricing, now: number): Promise<CampaignUsage[] | null> {
+  const since = window === "7d" ? new Date(now - 7 * 86_400_000) : startOfUtcDay(now);
   try {
     return await usageByCampaign(await getDb(), since, pricing);
   } catch {
@@ -94,6 +95,7 @@ async function childViews(): Promise<ChildLatchView[]> {
 
 export default async function Guardrails({ searchParams }: { searchParams: Promise<{ window?: string }> }) {
   const window = (await searchParams).window === "7d" ? "7d" : "today";
+  const readAt = new Date();
   const live = await Promise.all(
     latches.map(async (l) => {
       const ready = configured(l.token);
@@ -101,14 +103,25 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
     }),
   );
   const pricing = ((live[0]?.data?.budget ?? {}) as Budget).modelPricing ?? {};
-  const [usage, children, pipelines] = await Promise.all([campaignUsage(window, pricing), childViews(), snapshots()]);
+  // One source for every count and spend on the page: Merit's own log of its latch calls (Latch's budget counter
+  // reports whole cents, and its audit list is only the newest few entries).
+  const [today, week, children, pipelines] = await Promise.all([campaignUsage("today", pricing, readAt.getTime()), campaignUsage("7d", pricing, readAt.getTime()), childViews(), snapshots()]);
+  const usage = window === "7d" ? week : today;
   const probesFor = (latch: LatchName) =>
     (Object.entries(PROBES) as [ProbeKey, (typeof PROBES)[ProbeKey]][]).filter(([, p]) => p.latch === latch).map(([key, p]) => ({ key, label: p.label, rule: p.rule, step: p.step }));
   return (
     <div className="grid gap-10">
       <PageHeader
         title="Guardrails"
-        description="Merit never holds an Anthropic or X key. Every call goes through a Latch latch that checks it against a policy before the credential is attached. This page reads each latch's capabilities, budget and audit log right now, with that latch's own token, on the server."
+        description={
+          <>
+            Merit never holds an Anthropic or X key. Every call goes through a Latch latch that checks it against a policy before the credential is attached. This page reads each latch&apos;s capabilities, budget and audit log on every load, with that latch&apos;s own token, on the server. All times are UTC; read at{" "}
+            <span className="font-mono">{readAt.toISOString().slice(11, 19)} UTC</span> ·{" "}
+            <a href={window === "7d" ? "/guardrails?window=7d" : "/guardrails"} className="text-foreground underline underline-offset-4">
+              Refresh
+            </a>
+          </>
+        }
       />
       <div className="grid gap-5 xl:grid-cols-2">
         {live.map((l) => {
@@ -117,7 +130,8 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
           const raw = l.data?.audit as { entries?: AuditEntry[] } | AuditEntry[] | undefined;
           const audit = (Array.isArray(raw) ? raw : raw?.entries ?? []).slice(0, 8);
           const reachable = !l.missing && !caps.error;
-          const used = budget.maxDailyCents ? Math.min(100, ((budget.currentDailySpendCents ?? 0) / budget.maxDailyCents) * 100) : 0;
+          const spent = today ? latchTotals(today, l.name).cents : (budget.currentDailySpendCents ?? 0);
+          const used = budget.maxDailyCents ? Math.min(100, (Math.max(spent, budget.currentDailySpendCents ?? 0) / budget.maxDailyCents) * 100) : 0;
           return (
             <Card
               key={l.name}
@@ -153,12 +167,15 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
                   </div>
 
                   <div className="bg-muted/50 rounded-xl p-4">
-                    <p className="label">Spend today</p>
+                    <p className="label">Spend today (since 00:00 UTC)</p>
                     {budget.maxDailyCents !== undefined ? (
                       <>
                         <p className="mt-2">
-                          <span className="display text-3xl tabular-nums">{budget.currentDailySpendCents}¢</span>
-                          <span className="text-muted-foreground"> of {budget.maxDailyCents}¢ · {budget.remaining}¢ left</span>
+                          <span className="display text-3xl tabular-nums">{today ? cents(latchTotals(today, l.name).cents) : `${budget.currentDailySpendCents}¢`}</span>
+                          <span className="text-muted-foreground"> of {budget.maxDailyCents}¢ · {today ? `${latchTotals(today, l.name).calls} calls` : `${budget.remaining}¢ left`}</span>
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          From Merit&apos;s log. Latch&apos;s own counter shows {budget.currentDailySpendCents ?? 0}¢: it counts whole cents and enforces the cap.
                         </p>
                         <div className="bg-background mt-3 h-1.5 overflow-hidden rounded-full">
                           <div className="bg-brand h-full rounded-full" style={{ width: `${used}%` }} />
@@ -170,7 +187,7 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
                   </div>
 
                   <div>
-                    <p className="label mb-2">Latest decisions</p>
+                    <p className="label mb-2">Latest decisions in Latch&apos;s audit log (newest 8, includes probes)</p>
                     <div className="overflow-x-auto rounded-xl border">
                       <Table className="table-fixed">
                         <TableHeader>
@@ -225,8 +242,8 @@ export default async function Guardrails({ searchParams }: { searchParams: Promi
           </div>
         </Card>
       </div>
-      <ChildLatches>{children}</ChildLatches>
-      {usage ? <CampaignUsageTable usage={usage} window={window} /> : <Notice tone="warning">Per-campaign usage needs the database, which isn&apos;t reachable right now.</Notice>}
+      <ChildLatches today={today} week={week}>{children}</ChildLatches>
+      {usage ? <CampaignUsageTable usage={usage} window={window} readAt={readAt} /> : <Notice tone="warning">Per-campaign usage needs the database, which isn&apos;t reachable right now.</Notice>}
     </div>
   );
 }

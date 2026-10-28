@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInOwner, useOwnerWallet } from "@/lib/client/owner-wallet";
-import { createWallet, savedAddress, unlockWallet } from "@/lib/client/wallet";
+import { createWallet, errorAfterEdit, savedAddress, unlockWallet } from "@/lib/client/wallet";
 
 /**
  * Sign in as an owner with the Rialo wallet in this browser: unlock it (or create one), then sign a one-time
@@ -60,7 +60,10 @@ export function OwnerSignIn() {
           autoComplete={address ? "current-password" : "new-password"}
           placeholder={address ? "Passphrase to unlock" : "New passphrase (8+ characters)"}
           value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
+          onChange={(e) => {
+            setPassphrase(e.target.value);
+            setError((err) => errorAfterEdit(err, e.target.value, !address));
+          }}
           className="h-10"
         />
       </div>
@@ -109,7 +112,10 @@ export function UnlockWallet({ owner, purpose }: { owner: string; purpose: strin
           autoComplete="current-password"
           placeholder="Passphrase to unlock"
           value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
+          onChange={(e) => {
+            setPassphrase(e.target.value);
+            setError((err) => errorAfterEdit(err, e.target.value, false));
+          }}
           className="h-10"
         />
         <Button type="submit" className="h-10 px-4" disabled={!passphrase || busy}>

@@ -71,7 +71,8 @@ const upstreamPath = (url: string) => new URL(url).pathname.replace(/^\/proxy/, 
 async function viaLatch(latch: LatchName, path: string, campaign: string, init: RequestInit = {}) {
   const { token, via } = latchToken(latch, campaign);
   const url = `${LATCH_PROXY}${path}`;
-  const log = { latch, via, campaign, method: (init.method ?? "GET").toUpperCase(), path: upstreamPath(url) };
+  // Stamped when the call starts, as Latch's audit log stamps it, so a slow call lands in the same minute (and day) in both.
+  const log = { latch, via, campaign, method: (init.method ?? "GET").toUpperCase(), path: upstreamPath(url), createdAt: new Date() };
   let response: Response;
   try {
     response = await fetch(url, {
@@ -126,7 +127,7 @@ export async function readPost(postId: string, campaign: string): Promise<XPost>
 function loggedFetch(latch: LatchName, campaign: string, via: "child" | "parent"): typeof fetch {
   return async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const log = { latch, via, campaign, method: (init?.method ?? "GET").toUpperCase(), path: upstreamPath(url) };
+    const log = { latch, via, campaign, method: (init?.method ?? "GET").toUpperCase(), path: upstreamPath(url), createdAt: new Date() };
     let response: Response;
     try {
       response = await fetch(input, init);

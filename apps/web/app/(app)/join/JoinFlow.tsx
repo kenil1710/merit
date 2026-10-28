@@ -3,7 +3,7 @@
 import type { Keypair } from "@rialo/ts-cdk";
 import { ArrowRight, AtSign, Link2, Send } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HexValue } from "@/components/hex-value";
 import { StatusBadge } from "@/components/status-badge";
@@ -16,8 +16,21 @@ import { WalletPanel } from "@/components/wallet-panel";
 import { signMessage } from "@/lib/client/wallet";
 import { formatRlo } from "@/lib/merit/constants";
 import { linkMessage } from "@/lib/merit/messages";
+import type { RoundState } from "@/lib/shared/round-window";
 
-type OpenCampaign = { address: string; name: string; brief: string; roundEndMs: number; round: number; minScore: number; rateKelvin: string };
+type OpenCampaign = {
+  address: string;
+  name: string;
+  brief: string;
+  roundEndMs: number;
+  round: number;
+  minScore: number;
+  rateKelvin: string;
+  state: RoundState;
+  takesSubmissions: boolean;
+  nextOpensAtMs: number | null;
+  statusText: string;
+};
 type SessionInfo = { signInAvailable: boolean; signInMissing: string | null; session: { xUserId: string; username: string } | null; wallet: string | null };
 type Result = { outcome: string; score: number; reasons: string[]; minScore?: number; approveSignature?: string; openLedgerSignature?: string };
 
@@ -42,6 +55,14 @@ export function JoinFlow({ campaigns }: { campaigns: OpenCampaign[] }) {
   const [info, setInfo] = useState<SessionInfo | null>(null);
   const [keypair, setKeypair] = useState<Keypair | null>(null);
   const [campaign, setCampaign] = useState(campaigns[0]?.address ?? "");
+  const router = useRouter();
+  // Between rounds the page reloads itself once the next round should be open, so it never sits on a stale status.
+  useEffect(() => {
+    const next = campaigns.map((c) => (c.state === "open" ? c.roundEndMs : c.nextOpensAtMs)).filter((t): t is number => t !== null && t > Date.now());
+    if (!next.length) return;
+    const id = setTimeout(() => router.refresh(), Math.min(...next) - Date.now() + 5_000);
+    return () => clearTimeout(id);
+  }, [campaigns, router]);
   const [postUrl, setPostUrl] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(params.get("error"));
@@ -148,8 +169,8 @@ export function JoinFlow({ campaigns }: { campaigns: OpenCampaign[] }) {
           description="Post from your signed-in account after the round opened, then paste the link."
         >
           {campaigns.length === 0 ? (
-            <EmptyState art="box" title="No round is open" action={{ label: "Explore campaigns", href: "/explore" }}>
-              Every campaign is between rounds right now. Open rounds appear here with a countdown.
+            <EmptyState art="box" title="No campaign is running" action={{ label: "Explore campaigns", href: "/explore" }}>
+              No campaign has a round open or about to open. Running campaigns appear here with a countdown.
             </EmptyState>
           ) : (
             <div className="grid gap-4">
@@ -161,15 +182,25 @@ export function JoinFlow({ campaigns }: { campaigns: OpenCampaign[] }) {
                   value={campaign}
                   onChange={(e) => setCampaign(e.target.value)}
                 >
-                  {campaigns.map((c) => <option key={c.address} value={c.address}>{c.name} · round {c.round}</option>)}
+                  {campaigns.map((c) => (
+                    <option key={c.address} value={c.address}>
+                      {c.name} · round {c.state === "open" ? c.round : `${c.round + 1} next`}
+                    </option>
+                  ))}
                 </select>
               </div>
               {selected ? (
                 <div className="bg-muted/50 rounded-2xl p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="label">Brief</p>
-                    <Countdown until={selected.roundEndMs} />
+                    {selected.state === "open" ? <Countdown until={selected.roundEndMs} /> : null}
                   </div>
+                  <p className="mt-2 text-sm font-medium" data-testid="round-status">
+                    {selected.statusText}.
+                  </p>
+                  {selected.state === "closing" && selected.takesSubmissions ? (
+                    <p className="text-muted-foreground mt-1 text-xs">Posts written during round {selected.round} can still be submitted until it pays out.</p>
+                  ) : null}
                   <p className="mt-2 text-sm leading-relaxed">{selected.brief}</p>
                   <p className="text-muted-foreground mt-2 text-xs">
                     Score 100 pays <span className="font-mono">{formatRlo(BigInt(selected.rateKelvin))} RLO</span> · minimum score {selected.minScore}
@@ -180,7 +211,7 @@ export function JoinFlow({ campaigns }: { campaigns: OpenCampaign[] }) {
                 <Label htmlFor="post-url">Post link</Label>
                 <Input id="post-url" className="h-10" placeholder="https://x.com/you/status/…" value={postUrl} onChange={(e) => setPostUrl(e.target.value)} />
               </div>
-              <Button className="h-10 w-fit px-4" disabled={!linked || !postUrl || Boolean(busy)} onClick={submit}>
+              <Button className="h-10 w-fit px-4" disabled={!linked || !postUrl || Boolean(busy) || !selected?.takesSubmissions} onClick={submit}>
                 {busy && busy !== "Linking…" ? busy : "Submit for judging"}
               </Button>
               {!linked ? <p className="text-muted-foreground text-xs">Sign in and link an unlocked wallet first.</p> : null}

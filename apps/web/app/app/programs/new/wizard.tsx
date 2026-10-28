@@ -416,9 +416,12 @@ export function ProgramWizard({ owner, host }: { owner: string; host: string }) 
     } catch {
       /* ignore */
     }
+    // A fresh form shows no errors until a field is touched or Next is pressed again.
     setForm(initialForm());
     setErrors({});
     setServerErrors({});
+    setTouched(new Set());
+    setFormError(null);
     goTo(0);
   }
 

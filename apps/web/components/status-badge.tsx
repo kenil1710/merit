@@ -63,6 +63,14 @@ export function phaseStatus(phase: number): BadgeStatus {
   return (["idle", "open", "settling", "waiting_funds", "ended", "refunded", "awaiting_owner"] as const)[phase] ?? "idle";
 }
 
+/** A campaign's round status (`roundStatus`) to a badge: a round past its end shows Settling even before the chain flips the phase. */
+export function roundBadge(state: string): BadgeStatus {
+  if (state === "open") return "open";
+  if (state === "closing" || state === "paying") return "settling";
+  if (state === "waiting_funds" || state === "awaiting_owner" || state === "ended" || state === "idle") return state;
+  return "idle";
+}
+
 /** Ledger entry status text (ENTRY_STATUS_NAMES) to a badge. */
 export function entryStatus(status: string, paid: boolean): BadgeStatus {
   if (paid) return "paid";

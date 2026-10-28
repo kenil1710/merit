@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { EmptyState, Section, TableFrame } from "@/components/ui-kit";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { CampaignUsage } from "@/lib/server/latch-usage";
+import { usageLabel, type CampaignUsage } from "@/lib/server/latch-usage";
 
 const short = (a: string) => (a.length > 20 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
-const cents = (c: number) => (c < 0.01 && c > 0 ? "<0.01¢" : `${c.toFixed(2)}¢`);
+export const cents = (c: number) => (c < 0.01 && c > 0 ? "<0.01¢" : `${c.toFixed(2)}¢`);
 
 function Counts({ s }: { s: { calls: number; allowed: number; denied: number; failed: number; child: boolean } }) {
   if (s.calls === 0) return <span className="text-muted-foreground">none</span>;
@@ -21,7 +21,7 @@ function Counts({ s }: { s: { calls: number; allowed: number; denied: number; fa
 }
 
 /** Merit's latch calls grouped by the X-Merit-Campaign header they carried. */
-export function CampaignUsageTable({ usage, window }: { usage: CampaignUsage[]; window: "today" | "7d" }) {
+export function CampaignUsageTable({ usage, window, readAt }: { usage: CampaignUsage[]; window: "today" | "7d"; readAt: Date }) {
   const tab = (w: "today" | "7d", label: string) =>
     w === window ? (
       <span className="bg-muted rounded-md px-2 py-1 font-medium">{label}</span>
@@ -33,7 +33,7 @@ export function CampaignUsageTable({ usage, window }: { usage: CampaignUsage[]; 
   return (
     <Section
       title="Per campaign"
-      description="Every call Merit sends names its campaign in the X-Merit-Campaign header, which both latches require. Latch's audit log keeps no headers, so this is Merit's own log of the same calls, grouped by that header. Spend uses merit-judge's own pricing; REX validators' reads go straight to merit-x and show only in its audit."
+      description={`Every call Merit sends names its campaign in the X-Merit-Campaign header, which both latches require. Latch's audit log keeps no headers, so this is Merit's own log of the same calls, grouped by that header, and every count and spend on this page comes from it. Spend uses merit-judge's own pricing; REX validators' reads go straight to merit-x and show only in its audit. Times are UTC: "Today" is since 00:00 UTC, read at ${readAt.toISOString().slice(11, 19)} UTC.`}
       actions={
         <div id="per-campaign" className="flex scroll-mt-24 gap-1 text-sm">
           {tab("today", "Today (UTC)")}
@@ -42,7 +42,7 @@ export function CampaignUsageTable({ usage, window }: { usage: CampaignUsage[]; 
       }
     >
       {usage.length === 0 ? (
-        <EmptyState title="No calls yet">No call through merit-judge or merit-x in this window.</EmptyState>
+        <EmptyState title="No calls yet">No call through merit-judge or merit-x {window === "today" ? "since 00:00 UTC" : "in the last 7 days"}.</EmptyState>
       ) : (
         <TableFrame>
           <Table>
@@ -59,7 +59,7 @@ export function CampaignUsageTable({ usage, window }: { usage: CampaignUsage[]; 
               {usage.map((u) => (
                 <TableRow key={u.campaign}>
                   <TableCell className="pl-4">
-                    <p className="font-medium">{u.name ?? (u.campaign.startsWith("owner-") ? "Owner “Read it”" : "Campaign")}</p>
+                    <p className="font-medium">{usageLabel(u)}</p>
                     <p className="text-muted-foreground font-mono text-xs" title={u.campaign}>
                       {short(u.campaign)}
                     </p>

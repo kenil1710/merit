@@ -43,6 +43,13 @@
       "when": 1793088869878,
       "tag": "0005_store_records",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793176212421,
+      "tag": "0006_faucet_grants",
+      "breakpoints": true
     }
   ]
 }

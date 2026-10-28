@@ -1,15 +1,17 @@
 "use client";
 
 import { ChevronRight, ExternalLink, FileCheck2, Gavel, ShieldCheck, Wallet } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { HexValue } from "@/components/hex-value";
 import { entryStatus, StatusBadge } from "@/components/status-badge";
-import { TableFrame } from "@/components/ui-kit";
+import { EmptyState, TableFrame } from "@/components/ui-kit";
 import { Stepper, type Step } from "@/components/ui-kit/stepper";
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatRlo } from "@/lib/merit/constants";
-import type { DecisionView } from "@/lib/server/campaign-view";
+import type { DecisionView, RoundView } from "@/lib/server/campaign-view";
 
 const utc = (ms?: number) => (ms ? `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC` : "—");
 
@@ -43,7 +45,7 @@ export function DecisionsTable({ decisions, round }: { decisions: DecisionView[]
                 </TableCell>
                 <TableCell>
                   <span className="display text-2xl tabular-nums">{d.score}</span>
-                  <span className="text-muted-foreground text-xs"> / 100</span>
+                  <span className="text-muted-foreground text-xs">/100</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1.5">
@@ -57,7 +59,7 @@ export function DecisionsTable({ decisions, round }: { decisions: DecisionView[]
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="font-mono tabular-nums">{formatRlo(BigInt(d.amountKelvin))} RLO</div>
-                  {d.tx.payout ? <StatusBadge status="paid" className="mt-1" /> : null}
+                  {d.paid ? <StatusBadge status="paid" className="mt-1" /> : null}
                 </TableCell>
                 <TableCell className="pr-5">
                   <button
@@ -78,25 +80,32 @@ export function DecisionsTable({ decisions, round }: { decisions: DecisionView[]
   );
 }
 
-function journey(d: DecisionView): Step[] {
-  const verified = d.status === "Verified";
-  const failed = d.status === "Failed verification" || d.status === "Inconclusive";
+/**
+ * Where an entry is, from the chain first: an entry exists on a ledger only once the agent's approve landed, the REX
+ * verdict is its status, and paid is the payout. Nothing here waits on an off-chain record or a transaction link, so a
+ * paid entry can never read "in progress".
+ */
+export function journey(d: Pick<DecisionView, "status" | "paid" | "settled" | "judge" | "score" | "rex" | "amountKelvin">): Step[] {
+  const verified = d.status === "Verified" || d.paid;
+  const failed = d.status === "Failed verification" || d.status === "Inconclusive" || d.status === "Revoked";
+  // A settled round that never got a verdict will not get one: it was skipped, not still verifying.
+  const unverified = !verified && !failed && d.settled;
   return [
-    { key: "judged", label: "Judged by Claude through merit-judge", status: "done", icon: Gavel, meta: d.judge ? `score ${d.score}` : undefined },
-    { key: "approved", label: "Approved on chain by the agent", status: d.tx.approve ? "done" : "current", icon: FileCheck2 },
+    { key: "judged", label: "Judged by Claude through merit-judge", status: "done", icon: Gavel, meta: `score ${d.score}/100` },
+    { key: "approved", label: "Approved on chain by the agent", status: "done", icon: FileCheck2 },
     {
       key: "verified",
-      label: "Verified by validators (REX)",
-      status: verified ? "done" : failed ? "failed" : "current",
+      label: unverified ? "Not verified before the round settled" : "Verified by validators (REX)",
+      status: verified ? "done" : failed || unverified ? "failed" : "current",
       icon: ShieldCheck,
       meta: d.rex ? `${d.rex.outputs.length} reports` : undefined,
     },
     {
       key: "paid",
-      label: "Paid when the round settled",
-      status: d.tx.payout ? "done" : failed ? "skipped" : "waiting",
+      label: d.paid ? "Paid when the round settled" : d.settled ? "Not paid" : "Paid when the round settles",
+      status: d.paid ? "done" : failed || d.settled ? "skipped" : "waiting",
       icon: Wallet,
-      meta: d.tx.payout ? `${formatRlo(BigInt(d.amountKelvin))} RLO` : undefined,
+      meta: d.paid ? `${formatRlo(BigInt(d.amountKelvin))} RLO` : undefined,
     },
   ];
 }
@@ -127,7 +136,7 @@ export function DecisionDrawer({ decision: d, onClose }: { decision: DecisionVie
                     <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
                   </a>
                 </div>
-                <StatusBadge status={entryStatus(d.status, Boolean(d.tx.payout))} />
+                <StatusBadge status={entryStatus(d.status, d.paid)} />
               </div>
 
               <section aria-labelledby="journey-h">
@@ -149,7 +158,7 @@ export function DecisionDrawer({ decision: d, onClose }: { decision: DecisionVie
                     <p className="label">Score</p>
                     <p className="display mt-1 text-5xl leading-none tabular-nums">
                       {d.score}
-                      <span className="text-muted-foreground font-sans text-sm"> / 100</span>
+                      <span className="text-muted-foreground font-sans text-sm">/100</span>
                     </p>
                   </div>
                   <div>
@@ -197,7 +206,7 @@ export function DecisionDrawer({ decision: d, onClose }: { decision: DecisionVie
                   <dt className="text-muted-foreground">Verdict</dt>
                   <dd>{d.tx.verdict ? <HexValue value={d.tx.verdict} href={`/tx/${d.tx.verdict}`} label="verdict transaction" /> : "—"}</dd>
                   <dt className="text-muted-foreground">Paid</dt>
-                  <dd>{d.tx.payout ? <HexValue value={d.tx.payout} href={`/tx/${d.tx.payout}`} label="payout transaction" /> : "—"}</dd>
+                  <dd>{d.tx.payout ? <HexValue value={d.tx.payout} href={`/tx/${d.tx.payout}`} label="payout transaction" /> : d.paid ? "paid (no longer listed by DevNet)" : "—"}</dd>
                   <dt className="text-muted-foreground">Recipient</dt>
                   <dd><HexValue value={d.contributor} label="recipient wallet" /></dd>
                 </dl>
@@ -253,6 +262,100 @@ export function RexProof({ rex }: { rex: NonNullable<DecisionView["rex"]> }) {
         Report <span className="font-mono">{rex.reportAccount.slice(0, 8)}…</span>, owned by the REX processor. The program accepts
         it only from the PDA it recorded for this entry.
       </p>
+    </div>
+  );
+}
+
+export type DecisionFilter = "all" | "approved" | "paid";
+type Group = { kind: "round"; round: RoundView } | { kind: "empty"; from: number; to: number };
+
+/**
+ * Rounds newest first, with runs of rounds that approved nothing folded into one line, so a long-running campaign
+ * doesn't list dozens of empty tables. "approved" means approved on chain and not paid (yet, or ever); "paid" means paid.
+ */
+export function groupRounds(rounds: RoundView[], filter: DecisionFilter): Group[] {
+  const keep = (d: DecisionView) => filter === "all" || (filter === "paid" ? d.paid : !d.paid);
+  const out: Group[] = [];
+  for (const r of rounds) {
+    const decisions = r.decisions.filter(keep);
+    if (decisions.length) {
+      out.push({ kind: "round", round: { ...r, decisions } });
+      continue;
+    }
+    const last = out[out.length - 1];
+    if (last?.kind === "empty" && last.to === r.round + 1) last.to = r.round;
+    else out.push({ kind: "empty", from: r.round, to: r.round });
+  }
+  return out;
+}
+
+const PAGE = 10;
+
+/** Every round's decisions: a filter, the latest 10 rounds with decisions, and "Load more". */
+export function DecisionRounds({ rounds, roundBase }: { rounds: RoundView[]; roundBase?: string }) {
+  const [filter, setFilter] = useState<DecisionFilter>("all");
+  const [shown, setShown] = useState(PAGE);
+  const groups = groupRounds(rounds, filter);
+  // Count only rounds with decisions toward the page; an empty run between them comes along for free.
+  const cut = (() => {
+    let seen = 0;
+    for (let i = 0; i < groups.length; i++) if (groups[i].kind === "round" && ++seen > shown) return i;
+    return groups.length;
+  })();
+  const withDecisions = groups.filter((g) => g.kind === "round").length;
+  const counts = {
+    all: rounds.reduce((n, r) => n + r.decisions.length, 0),
+    approved: rounds.reduce((n, r) => n + r.decisions.filter((d) => !d.paid).length, 0),
+    paid: rounds.reduce((n, r) => n + r.decisions.filter((d) => d.paid).length, 0),
+  };
+  const label = (n: number) => (roundBase ? <Link href={`${roundBase}${n}`} className="underline-offset-4 hover:underline">Round {n}</Link> : `Round ${n}`);
+  return (
+    <div className="grid gap-6">
+      <div role="radiogroup" aria-label="Show decisions" className="bg-muted flex w-fit gap-1 rounded-lg p-1 text-sm" data-testid="decision-filter">
+        {(["all", "approved", "paid"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            role="radio"
+            aria-checked={filter === f}
+            onClick={() => {
+              setFilter(f);
+              setShown(PAGE);
+            }}
+            className={`rounded-md px-3 py-1 ${filter === f ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {f === "all" ? "All" : f === "approved" ? "Approved, not paid" : "Paid"} <span className="text-muted-foreground tabular-nums">{counts[f]}</span>
+          </button>
+        ))}
+      </div>
+      {withDecisions === 0 ? (
+        <EmptyState className="py-8">
+          {filter === "all" ? "No submission has been approved yet." : filter === "paid" ? "Nothing has been paid yet." : "Every approved submission has been paid."}
+        </EmptyState>
+      ) : (
+        groups.slice(0, cut).map((g) =>
+          g.kind === "empty" ? (
+            <p key={`e${g.from}`} className="text-muted-foreground border-l-2 pl-3 text-sm" data-testid="empty-rounds">
+              {g.from === g.to ? `Round ${g.from}` : `Rounds ${g.to}–${g.from}`}: {filter === "all" ? "nothing approved" : "none"}
+            </p>
+          ) : (
+            <div key={g.round.round} className="grid gap-3" data-testid="decision-round">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h3 className="font-medium">{label(g.round.round)}</h3>
+                {g.round.ledger ? (
+                  <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">ledger <HexValue value={g.round.ledger} label="round ledger" /></span>
+                ) : null}
+              </div>
+              <DecisionsTable decisions={g.round.decisions} round={g.round.round} />
+            </div>
+          ),
+        )
+      )}
+      {cut < groups.length && groups.slice(cut).some((g) => g.kind === "round") ? (
+        <Button variant="outline" className="w-fit" onClick={() => setShown((n) => n + PAGE)}>
+          Load more rounds
+        </Button>
+      ) : null}
     </div>
   );
 }

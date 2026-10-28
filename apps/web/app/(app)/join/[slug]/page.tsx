@@ -10,6 +10,7 @@ import type { MeritState } from "@/lib/merit/state";
 import { minimumRuleText, minimumStatus, type MinimumStatus } from "@/lib/minimums";
 import { perfectPayout, rlo } from "@/lib/program-math";
 import { listSources } from "@/lib/shared/program";
+import { roundStatus, isEndedPhase } from "@/lib/shared/round-window";
 import { rpc } from "@/lib/server/agent";
 import { accountOf, membership, publicProgram, userByX } from "@/lib/server/contributors";
 import { getSession } from "@/lib/server/session";
@@ -48,8 +49,9 @@ export default async function JoinProgramPage({ params, searchParams }: Props) {
   const minimums = session ? minimumStatus(program, accountOf(user)) : null;
   const blocked = !member && minimums?.outcome === "block";
   const ruleText = minimumRuleText(program);
-  const ended = !!program.endedAt || (state?.phase ?? 0n) >= 4n;
-  const open = state?.phase === 1n;
+  const ended = !!program.endedAt || isEndedPhase(state?.phase ?? 0n);
+  const status = state ? roundStatus(state) : null;
+  const open = status?.state === "open";
   const best = program.rubricJson.categories.reduce((m, c) => (perfectPayout(c.maxPoints, program.ratePerPoint) > m ? perfectPayout(c.maxPoints, program.ratePerPoint) : m), 0n);
   const first = program.rubricJson.categories[0];
 
@@ -63,7 +65,7 @@ export default async function JoinProgramPage({ params, searchParams }: Props) {
           {state && state.round > 0n ? (
             <li className="bg-card shadow-soft inline-flex items-center gap-2 rounded-full px-3.5 py-1.5" data-testid="join-round">
               <span aria-hidden="true" className={`size-2 rounded-full ${open ? "bg-success" : "bg-muted-foreground/50"}`} />
-              {open ? `Round ${state.round} is open until ${utc(Number(state.roundEndMs))}` : ended ? "Campaign ended" : `Round ${state.round} is settling`}
+              {open ? `Round ${state.round} is open until ${utc(Number(state.roundEndMs))}` : ended ? "Campaign ended" : status!.text}
             </li>
           ) : null}
           <li className="bg-card shadow-soft rounded-full px-3.5 py-1.5">

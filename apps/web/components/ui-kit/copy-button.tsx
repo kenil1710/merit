@@ -2,6 +2,7 @@
 
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 /** A button that copies a value (e.g. the join link) and confirms in place. */
@@ -26,6 +27,7 @@ export function CopyButton({
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
+          toast.success(copiedLabel, { duration: 1800 });
           setTimeout(() => setCopied(false), 1600);
         } catch {
           window.prompt("Copy this link", value);

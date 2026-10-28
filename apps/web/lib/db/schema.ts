@@ -484,6 +484,22 @@ export const storeRecords = pgTable(
   (t) => [primaryKey({ columns: [t.kind, t.key] })],
 );
 
+/**
+ * One DevNet faucet payout through Merit's relay: who got it (wallet), from where (sha256 of the caller's IP, never
+ * the IP itself) and when. The relay allows one per wallet per day and a few per IP per day.
+ */
+export const faucetGrants = pgTable(
+  "faucet_grants",
+  {
+    id: id(),
+    wallet: text("wallet").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    kelvin: kelvin("kelvin").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("faucet_grants_wallet_created_idx").on(t.wallet, t.createdAt), index("faucet_grants_ip_created_idx").on(t.ipHash, t.createdAt)],
+);
+
 /** "Ask for a second look": one per submission, resolved by the owner's decision. */
 export const appeals = pgTable(
   "appeals",

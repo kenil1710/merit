@@ -37,8 +37,20 @@ export function savedAddress(): string | null {
   return raw ? (JSON.parse(raw) as Vault).address : null;
 }
 
+export const PASSPHRASE_MIN = 8;
+
+/**
+ * A passphrase form's error after an edit: a "too short" error clears as soon as the passphrase is long enough, and
+ * an unlock error (wrong passphrase) clears on any edit, since only trying it again can tell.
+ */
+export function errorAfterEdit(error: string | null, passphrase: string, creating: boolean): string | null {
+  if (!error) return null;
+  if (!creating) return null;
+  return passphrase.length >= PASSPHRASE_MIN ? null : error;
+}
+
 export async function createWallet(passphrase: string): Promise<Keypair> {
-  if (passphrase.length < 8) throw new Error("Use a passphrase of at least 8 characters.");
+  if (passphrase.length < PASSPHRASE_MIN) throw new Error("Use a passphrase of at least 8 characters.");
   const store = storage();
   if (!store) throw new Error("This browser blocks local storage, so the wallet cannot be saved.");
   const keypair = Keypair.generate();

@@ -5,6 +5,7 @@ import { setupCurrent, setupSteps } from "@/lib/setup-flow";
 import type { Need, ProgramSummary } from "@/lib/server/program-summary";
 import { ProgramStatus } from "./program-status";
 import { RoundPill } from "./owner-shell";
+import { isEndedPhase } from "@/lib/shared/round-window";
 
 /** One program on the owner's home: status, round, escrow, and the next setup step while it isn't live. */
 export function ProgramCard({ s }: { s: ProgramSummary }) {
@@ -19,7 +20,7 @@ export function ProgramCard({ s }: { s: ProgramSummary }) {
           <p className="truncate font-medium">{p.name}</p>
           <p className="text-muted-foreground mt-0.5 truncate font-mono text-xs">/join/{p.slug}</p>
         </div>
-        <ProgramStatus status={p.status} ended={!!p.endedAt || (state?.phase ?? 0n) >= 4n} />
+        <ProgramStatus status={p.status} ended={!!p.endedAt || isEndedPhase(state?.phase ?? 0n)} />
       </div>
       {current === "live" ? (
         <div className="grid grid-cols-2 gap-3 text-sm">
