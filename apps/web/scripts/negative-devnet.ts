@@ -7,10 +7,15 @@
 // Usage: npx tsx scripts/negative-devnet.ts <state.json> run|cleanup
 //   run      create test campaigns A and B, run every case, print one JSON line per case
 //   cleanup  close the round, end both campaigns and withdraw what's left to the owner (after settlement)
+//   h1       audit H-1: a stranger pre-funds a future round's ledger address on test campaign C (60 s rounds);
+//            prints the campaign's phase over time. On a vulnerable program C stays in SETTLING for good.
+//   h1-check reads C again (phase, last settlement transactions)
+//   v3       program v3 (audit H-1, M-1, M-2, M-3) on test campaign D (60 s rounds) and the stuck C:
+//            pre-funded ledger addresses, skip_stuck, the ledger window after close_round, set_limits while settling
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { Keypair, TransactionBuilder, createRialoClient, encryptSecretBytes } from "@rialo/ts-cdk";
+import { Keypair, PublicKey, TransactionBuilder, createRialoClient, encryptSecretBytes, transferInstruction, type Instruction } from "@rialo/ts-cdk";
 import { base58 } from "@scure/base";
 import { RpcClient, findLedger, loadState } from "../lib/merit/chain";
 import { hex, unhex } from "../lib/merit/codec";
@@ -30,7 +35,7 @@ const keystore = (alias: string) => {
 };
 const owner = keystore("merit-contributor-demo");
 const agent = keystore("merit-agent-devnet");
-type State = { stranger: string; slugA: string; slugB: string; cases: unknown[] };
+type State = { stranger: string; slugA: string; slugB: string; slugC?: string; slugD?: string; cases: unknown[] };
 const state: State = existsSync(statePath!)
   ? (JSON.parse(readFileSync(statePath!, "utf8")) as State)
   : { stranger: base58.encode(crypto.getRandomValues(new Uint8Array(32))), slugA: hex(randomSlug()), slugB: hex(randomSlug()), cases: [] };
@@ -48,12 +53,12 @@ const campaignB = workflowAddress(O, nonce(slugB));
 const meritLines = (logs: string[]) => logs.map((l) => /Program log: (Merit .*)$/.exec(l)?.[1]).filter((x): x is string => !!x);
 
 /** Sends one instruction signed by `signer` (no preflight) and waits for its on-chain outcome. */
-async function send(signer: Keypair, instruction: PlainInstruction): Promise<{ signature: string | null; ok: boolean; err: string | null; merit: string[] }> {
+async function send(signer: Keypair, instruction: PlainInstruction | Instruction): Promise<{ signature: string | null; ok: boolean; err: string | null; merit: string[] }> {
   const tx = TransactionBuilder.create()
     .setPayer(signer.publicKey)
     .setValidFrom(BigInt(Date.now()))
     .setConfigHashPrefix(await client.getConfigHashPrefix())
-    .addInstruction(toCdkInstruction(instruction))
+    .addInstruction(typeof instruction.programId === "string" ? toCdkInstruction(instruction as PlainInstruction) : (instruction as Instruction))
     .build()
     .sign(signer);
   let signature: string;
@@ -81,7 +86,7 @@ const asSigner = (instruction: PlainInstruction, signer: string): PlainInstructi
   accounts: instruction.accounts.map((m, i) => (i === 0 ? { ...m, pubkey: signer } : m)),
 });
 
-async function step(name: string, signer: Keypair, instruction: PlainInstruction, expect: "accepted" | "rejected") {
+async function step(name: string, signer: Keypair, instruction: PlainInstruction | Instruction, expect: "accepted" | "rejected") {
   const r = await send(signer, instruction);
   const pass = expect === "accepted" ? r.ok : !r.ok;
   const line = { case: name, expect, pass, ...r };
@@ -104,6 +109,15 @@ async function encryptedXToken(): Promise<string> {
   new DataView(framed.buffer).setUint32(0, token.length, true);
   framed.set(token, 4);
   return hex(encryptSecretBytes(framed, agent.publicKey.toBytes(), await client.getSecretSharingPubkey()));
+}
+
+/** DevNet airdrops can take far longer than the SDK's confirm loop: request, then wait for the balance to reach `min`. */
+async function airdrop(kp: Keypair, amount: bigint, min: bigint) {
+  const who = kp.publicKey.toString();
+  if ((await rpc.balance(who)) >= min) return;
+  await client.requestAirdrop(kp.publicKey, amount);
+  for (let i = 0; i < 60 && (await rpc.balance(who)) < min; i++) await new Promise((r) => setTimeout(r, 3000));
+  if ((await rpc.balance(who)) < min) throw new Error(`airdrop to ${who} did not land in 3 minutes`);
 }
 
 const wallet = () => Keypair.generate().publicKey.toString();
@@ -280,7 +294,180 @@ async function withdrawAll() {
   if (s.opsBudgetKelvin > 0n) await step("cleanup: withdraw A's operations budget", owner, ix.withdrawOps(O, slugA, s.opsBudgetKelvin), "accepted");
 }
 
+/**
+ * Audit H-1. Test campaign C runs 60 s rounds with no approvals, so its round ledgers are never opened. A stranger
+ * sends a little RLO to the address round 1's ledger will have. Settlement must still read that account as an
+ * empty ledger and open round 2; a vulnerable program fails every settle_peek and stays in SETTLING.
+ */
+async function h1() {
+  state.slugC ??= hex(randomSlug());
+  save();
+  const slugC = unhex(state.slugC);
+  const campaignC = workflowAddress(O, nonce(slugC));
+  const ledger1 = ledgerAddress(A_, campaignC, 1n);
+  console.log(JSON.stringify({ campaignC, ledger1 }));
+  await airdrop(stranger, RLO / 5n, RLO / 20n);
+  await airdrop(owner, RLO, RLO / 5n);
+  const deadline = BigInt(Date.now() + 2 * 86_400_000);
+  const small = RLO / 100n;
+  await step("setup: create test campaign C (60 s rounds)", owner, ix.createCampaign(O, slugC, { agent: A_, rateKelvin: small, minScore: 50n, capPerPayout: small, capPerContributor: small, capPerRound: small, roundLengthMs: 60_000n, refundDeadlineMs: deadline }), "accepted");
+  await step("setup: fund C 0.02 RLO", owner, ix.fund(O, slugC, small * 2n), "accepted");
+  await step("setup: fund C's operations budget 0.02 RLO", owner, ix.fundOps(O, slugC, small * 2n), "accepted");
+  // Rent-exempt minimum for an empty account: the cheapest transfer the runtime keeps as an account.
+  await step("stranger: pre-fund C's round-1 ledger address (H-1)", stranger, transferInstruction(stranger.publicKey, PublicKey.fromString(ledger1), 1_000_000n), "accepted");
+  const pre = await rpc.account(ledger1);
+  console.log(JSON.stringify({ case: "round-1 ledger address after the transfer", kelvin: String(pre?.kelvin), owner: pre?.owner, dataLen: pre?.data.length }));
+  await step("setup: start C (round 1)", owner, ix.start(O, slugC), "accepted");
+  // Round 1: 60 s, grace min(5 min, 30 s), then settlement steps. Watch for 4 minutes.
+  for (let i = 0; i < 16; i++) {
+    await new Promise((r) => setTimeout(r, 15_000));
+    const c = await loadState(rpc, campaignC);
+    console.log(JSON.stringify({ t: i * 15 + 15, phase: String(c?.phase), round: String(c?.round) }));
+    if (c && c.round >= 2n) break;
+  }
+  await h1Check();
+}
+
+async function h1Check() {
+  const campaignC = workflowAddress(O, nonce(unhex(state.slugC!)));
+  const c = await loadState(rpc, campaignC);
+  const sigs = await rpc.signatures(campaignC, 5);
+  const recent = await Promise.all(sigs.map(async (s) => ({ signature: s.signature, err: s.err ? JSON.stringify(s.err).slice(0, 120) : null, merit: meritLines((await rpc.logs(s.signature).catch(() => ({ logs: [] as string[] }))).logs) })));
+  const line = { case: "H-1: campaign C after a stranger pre-funded its round-1 ledger", expect: "settles and opens round 2", pass: !!c && c.round >= 2n, phase: String(c?.phase), round: String(c?.round), recent };
+  console.log(JSON.stringify(line));
+  state.cases.push(line);
+  save();
+}
+
+/** H-1 on a stuck C: the owner's resume re-arms the same failing step, and refund doesn't accept SETTLING. */
+async function h1Owner() {
+  const slugC = unhex(state.slugC!);
+  await step("H-1: owner resume on stuck C (re-arms settle_peek)", owner, ix.resume(O, slugC), "accepted");
+  await new Promise((r) => setTimeout(r, 30_000));
+  await step("H-1: owner refund on stuck C (SETTLING, before the deadline)", owner, ix.refund(O, slugC), "rejected");
+  await h1Check();
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Waits until `check` holds for campaign `address`, polling every 5 s, up to `ms`. */
+async function until(address: string, ms: number, check: (c: NonNullable<Awaited<ReturnType<typeof loadState>>>) => boolean) {
+  for (let t = 0; t < ms; t += 5000) {
+    const c = await loadState(rpc, address);
+    if (c && check(c)) return c;
+    await sleep(5000);
+  }
+  throw new Error(`timed out waiting on ${address}`);
+}
+
+/**
+ * Program v3 on chain. D: 60 s rounds, 30 s grace. A stranger pre-funds D's round-1 and round-2 ledger addresses;
+ * round 1 (no approvals) must settle anyway, and the agent must still open round 2's ledger. Then close_round after
+ * that ledger opened, and an approval syncs the ledger's end to the early close (M-2). While round 2 settles,
+ * set_limits may not change the daily cap or threshold (M-3), and skip_stuck/refund are refused (M-1, not stuck).
+ * Finally the v2-stuck C: once STUCK_MS has passed, skip_stuck lets it finish the round.
+ */
+async function v3() {
+  state.slugD ??= hex(randomSlug());
+  save();
+  const slugD = unhex(state.slugD);
+  const D = workflowAddress(O, nonce(slugD));
+  const L1 = ledgerAddress(A_, D, 1n);
+  const L2 = ledgerAddress(A_, D, 2n);
+  console.log(JSON.stringify({ campaignD: D, ledger1: L1, ledger2: L2 }));
+  await airdrop(stranger, RLO / 5n, RLO / 20n);
+  await airdrop(owner, RLO, RLO / 5n);
+  const small = RLO / 100n;
+  await step("setup: create test campaign D (60 s rounds)", owner, ix.createCampaign(O, slugD, { agent: A_, rateKelvin: small, minScore: 50n, capPerPayout: small, capPerContributor: small, capPerRound: small, roundLengthMs: 60_000n, refundDeadlineMs: BigInt(Date.now() + 2 * 86_400_000) }), "accepted");
+  await step("setup: fund D 0.02 RLO", owner, ix.fund(O, slugD, small * 2n), "accepted");
+  await step("setup: fund D's operations budget 0.05 RLO", owner, ix.fundOps(O, slugD, small * 5n), "accepted");
+  await step("stranger: pre-fund D's round-1 ledger address", stranger, transferInstruction(stranger.publicKey, PublicKey.fromString(L1), 1_000_000n), "accepted");
+  await step("stranger: pre-fund D's round-2 ledger address", stranger, transferInstruction(stranger.publicKey, PublicKey.fromString(L2), 1_000_000n), "accepted");
+  await step("setup: start D (round 1)", owner, ix.start(O, slugD), "accepted");
+  await step("M-1 v3: skip_stuck while the round is open", owner, ix.skipStuck(O, slugD, L1), "rejected");
+
+  // H-1: round 1 had no approvals and a pre-funded ledger address; it must settle and open round 2.
+  const r2 = await until(D, 240_000, (c) => c.round >= 2n && c.phase === 1n).catch(() => null);
+  const h1 = { case: "H-1 v3: a round whose ledger address a stranger pre-funded settles and opens the next round", expect: "round 2 open", pass: !!r2, round: String(r2?.round) };
+  console.log(JSON.stringify(h1));
+  state.cases.push(h1);
+  save();
+  if (!r2) return;
+
+  // H-1: the agent opens round 2's ledger at its pre-funded address.
+  const token = await encryptedXToken();
+  await step("H-1 v3: agent opens a ledger at a pre-funded address", agent, ix.openLedger(A_, ledgerSlug(D, 2n), D, 2n, token), "accepted");
+  const opened = await rpc.account(L2);
+  console.log(JSON.stringify({ case: "round-2 ledger account", owner: opened?.owner, dataLen: opened?.data.length, kelvin: String(opened?.kelvin) }));
+
+  // M-2: close the round after its ledger opened, then approve; the ledger's end follows the campaign's.
+  await step("setup: owner closes D's round 2 early", owner, ix.closeRound(O, slugD), "accepted");
+  const closed = (await loadState(rpc, D))!;
+  const approval = await step("M-2 v3: approve after close_round (inside the grace) syncs the ledger's end", agent, ix.approve(A_, ledgerSlug(D, 2n), { campaign: D, contributor: wallet(), xUserId: 77n, postId: post(77), score: 100n, submissionHash: fakeHash(), payee: payeeAddress(A_, D, 77n) }), "accepted");
+  const ledger2 = await findLedger(rpc, closed, 2n);
+  const m2 = { case: "M-2 v3: ledger round_end_ms equals the campaign's after an early close", expect: String(closed.roundEndMs), pass: ledger2?.roundEndMs === closed.roundEndMs, ledgerEnd: String(ledger2?.roundEndMs), merit: approval.merit };
+  console.log(JSON.stringify(m2));
+  state.cases.push(m2);
+  save();
+
+  // M-3 and M-1 while D settles round 2 (closed, inside its grace or settling).
+  const settling = await until(D, 90_000, (c) => c.phase === 2n).catch(() => null);
+  if (settling) {
+    await step("M-3 v3: set_limits lowering the daily cap while a round settles", owner, ix.setLimits(O, slugD, { maxPerDay: small, approvalThreshold: 0n, cooldownMs: 0n, submitGraceMs: 300_000n }), "rejected");
+    await step("M-3 v3: set_limits adding an approval threshold while a round settles", owner, ix.setLimits(O, slugD, { maxPerDay: 0n, approvalThreshold: 1n, cooldownMs: 0n, submitGraceMs: 300_000n }), "rejected");
+    await step("M-3 v3: set_limits changing only the cooldown while a round settles", owner, ix.setLimits(O, slugD, { maxPerDay: 0n, approvalThreshold: 0n, cooldownMs: 60_000n, submitGraceMs: 300_000n }), "accepted");
+    await step("M-1 v3: skip_stuck while settlement is making progress", owner, ix.skipStuck(O, slugD, L2), "rejected");
+    await step("M-1 v3: refund from SETTLING that isn't stuck", owner, ix.refund(O, slugD), "rejected");
+    await step("stranger: skip_stuck on D", stranger, asSigner(ix.skipStuck(O, slugD, L2), S), "rejected");
+  } else console.log(JSON.stringify({ case: "M-3/M-1 on D", skipped: "D never read as settling" }));
+}
+
+/** M-1 on v3: the campaign C stuck under v2 (H-1). Once STUCK_MS has passed with no step, skip_stuck recovers it. */
+async function v3Stuck() {
+  const slugC = unhex(state.slugC!);
+  const C = workflowAddress(O, nonce(slugC));
+  const before = (await loadState(rpc, C))!;
+  console.log(JSON.stringify({ phase: String(before.phase), round: String(before.round), lastBeatMs: String(before.lastBeatMs) }));
+  await step("M-1 v3: owner skip_stuck on the stuck campaign C", owner, ix.skipStuck(O, slugC, ledgerAddress(A_, C, before.round)), "accepted");
+  const after = await until(C, 120_000, (c) => c.round > before.round || c.phase !== 2n).catch(() => null);
+  const line = { case: "M-1 v3: a stuck campaign leaves SETTLING after skip_stuck", expect: "next round or ended", pass: !!after, phase: String(after?.phase), round: String(after?.round) };
+  console.log(JSON.stringify(line));
+  state.cases.push(line);
+  save();
+}
+
+/** Ends D and returns its funds once it can. */
+async function v3Cleanup() {
+  const slugD = unhex(state.slugD!);
+  const D = workflowAddress(O, nonce(slugD));
+  let d = (await loadState(rpc, D))!;
+  if (d.phase !== 4n && d.phase !== 5n && !d.ending) await step("cleanup: end D", owner, ix.end(O, slugD), "accepted");
+  d = await until(D, 300_000, (c) => c.phase === 4n || c.phase === 0n || c.phase === 5n);
+  if (d.escrowKelvin > 0n) await step("cleanup: withdraw D's escrow", owner, ix.withdraw(O, slugD, d.escrowKelvin), "accepted");
+  if (d.opsBudgetKelvin > 0n) await step("cleanup: withdraw D's operations budget", owner, ix.withdrawOps(O, slugD, d.opsBudgetKelvin), "accepted");
+}
+
+/** Ends C and returns its escrow and budget (once it can). */
+async function h1Cleanup() {
+  const slugC = unhex(state.slugC!);
+  const c = (await loadState(rpc, workflowAddress(O, nonce(slugC))))!;
+  console.log(JSON.stringify({ phase: String(c.phase), escrow: String(c.escrowKelvin), ops: String(c.opsBudgetKelvin) }));
+  if (c.phase !== 4n && c.phase !== 5n) await step("cleanup: end C", owner, ix.end(O, slugC), "accepted");
+  const after = (await loadState(rpc, workflowAddress(O, nonce(slugC))))!;
+  if (after.phase === 4n || after.phase === 0n) {
+    if (after.escrowKelvin > 0n) await step("cleanup: withdraw C's escrow", owner, ix.withdraw(O, slugC, after.escrowKelvin), "accepted");
+    if (after.opsBudgetKelvin > 0n) await step("cleanup: withdraw C's operations budget", owner, ix.withdrawOps(O, slugC, after.opsBudgetKelvin), "accepted");
+  }
+}
+
 if (mode === "run") await run();
+else if (mode === "h1") await h1();
+else if (mode === "h1-check") await h1Check();
+else if (mode === "h1-owner") await h1Owner();
+else if (mode === "v3") await v3();
+else if (mode === "v3-stuck") await v3Stuck();
+else if (mode === "v3-cleanup") await v3Cleanup();
+else if (mode === "h1-cleanup") await h1Cleanup();
 else if (mode === "cleanup") await cleanup();
 else if (mode === "forge") await forge();
 else if (mode === "withdraw") await withdrawAll();

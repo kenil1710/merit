@@ -526,3 +526,47 @@ fn payee_cooldown_and_limits() {
     assert!(!validate_limits(&c, 0, MAX_COOLDOWN_MS + 1, 0));
     assert!(!validate_limits(&c, 0, 0, MAX_SUBMIT_GRACE_MS + 1));
 }
+
+// ── Program v3: audit fixes ──
+
+#[test]
+fn h1_a_prefunded_ledger_address_reads_as_no_ledger() {
+    assert!(ledger_absent(0, 0, false), "nothing there");
+    assert!(ledger_absent(0, 1, false), "1 kelvin sent by a stranger");
+    assert!(ledger_absent(0, 890_880, false), "rent minimum sent by a stranger");
+    assert!(!ledger_absent(3_000, 30_000_000, true), "a real ledger");
+    assert!(!ledger_absent(3_000, 30_000_000, false), "data owned by someone else is never an empty ledger");
+    assert!(!ledger_absent(0, 5, true), "a program-owned account is never treated as absent once it holds kelvin");
+}
+
+#[test]
+fn m1_settlement_is_stuck_only_after_stuck_ms_without_progress() {
+    assert!(!settlement_stuck(phase::SETTLING, NOW, NOW + STUCK_MS - 1));
+    assert!(settlement_stuck(phase::SETTLING, NOW, NOW + STUCK_MS));
+    for p in [phase::IDLE, phase::OPEN, phase::WAITING_FUNDS, phase::ENDED, phase::REFUNDED, phase::AWAITING_APPROVAL] {
+        assert!(!settlement_stuck(p, NOW, NOW + 10 * STUCK_MS), "phase {p}");
+    }
+}
+
+#[test]
+fn m2_a_ledger_takes_the_campaigns_earlier_end_after_an_early_close() {
+    let end = NOW + 300_000;
+    assert_eq!(synced_round_end(end, NOW + 60_000), NOW + 60_000, "closed early: the ledger shrinks");
+    assert_eq!(synced_round_end(end, end), end);
+    assert_eq!(synced_round_end(end, end + 300_000), end, "never grows");
+    // A post written after the early close fails round N's window and is judged in round N+1 only.
+    let proof = PostProof { post_id: 7, author_id: 9, created_ms: NOW + 120_000 };
+    assert_eq!(judge_proof(&proof, 7, 9, NOW, synced_round_end(end, NOW + 60_000)), Verdict::OutsideRound);
+}
+
+#[test]
+fn m3_limits_freeze_while_a_round_settles() {
+    for p in [phase::SETTLING, phase::WAITING_FUNDS, phase::AWAITING_APPROVAL] {
+        assert!(!limits_change_allowed(p, (RLO, RLO / 2), (0, 0)), "lowering the daily cap in phase {p}");
+        assert!(!limits_change_allowed(p, (RLO, RLO), (0, 1)), "adding an approval threshold in phase {p}");
+        assert!(limits_change_allowed(p, (RLO, RLO), (5, 5)), "cooldown/grace only in phase {p}");
+    }
+    for p in [phase::IDLE, phase::OPEN, phase::ENDED] {
+        assert!(limits_change_allowed(p, (RLO, 0), (0, 1)), "phase {p}");
+    }
+}

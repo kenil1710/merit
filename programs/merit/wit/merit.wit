@@ -25,4 +25,5 @@ world merit {
     export approve: func(campaign: pubkey, contributor: pubkey, x-user-id: u64, post-id: u64, score: u64, submission-hash: pubkey, payee: pubkey) -> result<_, error>;
     export retry-verify: func(campaign: pubkey, index: u64) -> result<_, error>;
     export revoke: func(campaign: pubkey, index: u64) -> result<_, error>;
+    export skip-stuck: func(ledger: pubkey) -> result<_, error>;
 }

@@ -32,6 +32,7 @@ export const TAGS = {
   approve: 24,
   retry_verify: 25,
   revoke: 26,
+  skip_stuck: 28,
 } as const;
 
 type Meta = { pubkey: string; isSigner: boolean; isWritable: boolean };
@@ -114,6 +115,10 @@ export const ix = {
   setLimits: (owner: string, slug: Uint8Array, l: { maxPerDay: bigint; approvalThreshold: bigint; cooldownMs: bigint; submitGraceMs: bigint }) =>
     build("set_limits", owner, slug, none, (w) => w.u64(l.maxPerDay).u64(l.approvalThreshold).u64(l.cooldownMs).u64(l.submitGraceMs)),
   approveRound: (owner: string, slug: Uint8Array) => build("approve_round", owner, slug, oneTimer, () => {}),
+  // Program v3: after STUCK_MS with no settlement step succeeding, skip the step that keeps failing. Two timer slots:
+  // the next settle step, or the next round's first beat.
+  skipStuck: (owner: string, slug: Uint8Array, ledger: string) =>
+    build("skip_stuck", owner, slug, { subscriptions: 2, userAccounts: [ledger] }, (w) => w.pubkey(ledger)),
   // Program v2: agent controls.
   revoke: (agent: string, ledgerSlug: Uint8Array, campaign: string, index: bigint) =>
     build("revoke", agent, ledgerSlug, { subscriptions: 0, userAccounts: [campaign] }, (w) => w.pubkey(campaign).u64(index)),

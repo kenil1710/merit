@@ -164,12 +164,12 @@ rialo! {
             use merit_core as rules;
             use rialo_rex_processor_interface::{instruction::derive_report_address, state::RexReport};
             use rialo_s_program::{
-                account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke,
+                account_info::AccountInfo, entrypoint::ProgramResult, msg, program::{invoke, invoke_signed},
                 program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction,
                 system_program, sysvar::Sysvar,
             };
             use rialo_types::{EncryptedInput, Nonce, RexData, RexOutput};
-            use rialo_venus::{derive_workflow_address, read_from_storage};
+            use rialo_venus::{derive_workflow_address, read_from_storage, WORKFLOW_SEED};
 
             // ---------------------------------------------------------------
             // Campaign: owner instructions
@@ -360,7 +360,8 @@ rialo! {
                 let refundable = self.phase == rules::phase::IDLE
                     || self.phase == rules::phase::ENDED
                     || self.phase == rules::phase::WAITING_FUNDS
-                    || self.phase == rules::phase::AWAITING_APPROVAL;
+                    || self.phase == rules::phase::AWAITING_APPROVAL
+                    || rules::settlement_stuck(self.phase, self.last_beat_ms, now);
                 if now < self.refund_deadline_ms || !refundable {
                     return Err(ProgramError::InvalidArgument);
                 }
@@ -453,6 +454,9 @@ rialo! {
                 }
                 let (entries, recipients, count) = self.load_ledger(&ledger_account)?;
                 let now = self.now_ms()?;
+                // v3: while settling, last_beat_ms is the last step that succeeded
+                // (the owner's skip_stuck measures from it).
+                self.last_beat_ms = now;
                 let grace = self.grace_ms();
                 // Paused, or still inside the round's grace (late approvals
                 // may land): look again at the next beat.
@@ -551,8 +555,15 @@ rialo! {
                     day_room,
                 );
                 let mut paid = false;
-                if let rules::Step::Pay { index: due, amount } = step {
-                    if due as u64 == index
+                if self.paused && now < self.refund_deadline_ms {
+                    // v3: pause stops a payout already scheduled; settle_peek waits.
+                    msg!("Merit payouts paused by the owner");
+                } else if let rules::Step::Pay { index: due, amount } = step {
+                    if due as u64 == index && recipients[due] == recipient && recipient_account.executable {
+                        // v3: a program can't be credited; record it as owed and move on.
+                        self.outcome[due] = rules::settle::UNFUNDED;
+                        msg!("Merit skipped entry {}: recipient {} is a program", due, recipient);
+                    } else if due as u64 == index
                         && recipients[due] == recipient
                         && recipient_account.key == &recipient
                         && recipient != self.workflow_pda()
@@ -575,10 +586,9 @@ rialo! {
                     }
                 }
                 if !paid {
-                    msg!("Merit payout {} no longer due; re-planning", index);
-                }
-                if self.paused {
-                    msg!("Merit payouts paused by the owner");
+                    msg!("Merit payout {} not made; re-planning", index);
+                } else {
+                    self.last_beat_ms = now;
                 }
                 let target = now.saturating_add(rules::SETTLE_STEP_MS);
                 AFTER target CALL [settle_peek ledger: ledger epoch: epoch];
@@ -679,6 +689,7 @@ rialo! {
                 self.round_end_ms = parent.round_end_ms;
                 self.reserve_tables();
                 self.x_token = EncryptedInput::new(x_token);
+                self.adopt_prefunded()?;
                 msg!("Merit ledger opened for campaign {} round {}", campaign, round);
                 Ok(())
             }
@@ -711,6 +722,7 @@ rialo! {
                     msg!("Merit rejected approval: round {} is closed or the campaign is paused", self.round);
                     return Err(ProgramError::InvalidArgument);
                 }
+                self.sync_round_window(&parent);
                 if parent.cooldown_ms > 0 {
                     let payee_account = self.account(&payee)?;
                     let registered = self.load_state(&payee_account)?;
@@ -785,6 +797,9 @@ rialo! {
                     return Err(ProgramError::InvalidArgument);
                 }
                 let parent = self.load_campaign(&campaign_account)?;
+                if parent.round == self.round {
+                    self.sync_round_window(&parent);
+                }
                 let entries = self.ledger_entries();
                 self.require_ops_budget(&parent, &entries, self.entry_count as usize)?;
                 let slot = index as usize;
@@ -971,6 +986,14 @@ rialo! {
                 if !rules::validate_limits(&self.config(), max_per_day, cooldown_ms, submit_grace_ms) {
                     return Err(ProgramError::InvalidArgument);
                 }
+                if !rules::limits_change_allowed(
+                    self.phase,
+                    (self.max_per_day, max_per_day),
+                    (self.approval_threshold, approval_threshold),
+                ) {
+                    msg!("Merit rejected set_limits: the daily cap and approval threshold are fixed while a round settles");
+                    return Err(ProgramError::InvalidArgument);
+                }
                 self.max_per_day = max_per_day;
                 self.approval_threshold = approval_threshold;
                 self.cooldown_ms = cooldown_ms;
@@ -1072,6 +1095,7 @@ rialo! {
                 self.payee_wallet = wallet;
                 self.payee_since_ms = now;
                 self.reserve_tables();
+                self.adopt_prefunded()?;
                 msg!("Merit payee X user {} registered wallet {} at {}", x_user_id, wallet, now);
                 Ok(())
             }
@@ -1092,8 +1116,108 @@ rialo! {
             }
 
             // ---------------------------------------------------------------
+            // Program v3: owner escape from a stuck settlement (audit M-1)
+            // ---------------------------------------------------------------
+
+            // After STUCK_MS with no settlement step succeeding, the owner skips
+            // the step that keeps failing: the agent's reimbursement, or the next
+            // payout, which is recorded as UNFUNDED (verified, owed, not paid).
+            // A ledger that can't be read ends the round with nothing paid.
+            // Settlement then continues on a new timer chain.
+            control fn skip_stuck(&mut self, ledger: Pubkey) -> ProgramResult {
+                let _ = ReadAccountInfo::from(ledger);
+                let ledger_account = self.account(&ledger)?;
+                self.require_campaign_owner()?;
+                let now = self.now_ms()?;
+                if !rules::settlement_stuck(self.phase, self.last_beat_ms, now) || ledger != self.round_ledger_address() {
+                    msg!("Merit rejected skip_stuck: settlement is not stuck");
+                    return Err(ProgramError::InvalidArgument);
+                }
+                self.timer_epoch = self.timer_epoch.saturating_add(1);
+                self.last_beat_ms = now;
+                let epoch = self.timer_epoch;
+                let target = now.saturating_add(rules::SETTLE_STEP_MS);
+                match self.load_ledger(&ledger_account) {
+                    Ok((entries, _, count)) => {
+                        if count > 0 && !self.round_reimbursed {
+                            self.round_reimbursed = true;
+                            msg!("Merit owner skipped round {}'s agent reimbursement", self.round);
+                        } else {
+                            let config = self.config();
+                            let day_room = self.day_room(now);
+                            let step = rules::next_step(
+                                &config,
+                                &entries,
+                                count,
+                                &mut self.outcome,
+                                self.round_paid_kelvin,
+                                self.escrow_kelvin,
+                                true,
+                                day_room,
+                            );
+                            if let rules::Step::Pay { index, .. } = step {
+                                self.outcome[index] = rules::settle::UNFUNDED;
+                                msg!("Merit owner skipped stuck payout {} (post {}): owed, unpaid", index, entries[index].post_id);
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        msg!("Merit round {} ledger unreadable; owner ended the round with nothing paid", self.round);
+                        let empty = [rules::Entry::EMPTY; rules::MAX_ENTRIES];
+                        if self.finish_step(rules::Step::Done, &empty, 0, now)? {
+                            let next_epoch = self.timer_epoch;
+                            let first_beat = now.saturating_add(rules::BEAT_MS);
+                            AFTER first_beat CALL [beat epoch: next_epoch];
+                        }
+                        return Ok(());
+                    }
+                }
+                AFTER target CALL [settle_peek ledger: ledger epoch: epoch];
+                Ok(())
+            }
+
+            // ---------------------------------------------------------------
             // Helpers
             // ---------------------------------------------------------------
+
+            // v3 (audit M-2): see rules::synced_round_end.
+            fn sync_round_window(&mut self, parent: &State) {
+                let end = rules::synced_round_end(self.round_end_ms, parent.round_end_ms);
+                if end != self.round_end_ms {
+                    msg!("Merit ledger round {} now ends at {} (closed early)", self.round, end);
+                    self.round_end_ms = end;
+                }
+            }
+
+            // v3 (audit H-1): Venus creates a workflow account with create_account,
+            // which fails on an address that already holds kelvin, and anyone can
+            // send kelvin to a predictable PDA. A pre-funded, empty, system-owned
+            // account is assigned to this program here; Venus then grows it to size
+            // and tops up its rent like any other workflow account.
+            fn adopt_prefunded(&self) -> ProgramResult {
+                let workflow = self.accounts[1].clone();
+                if workflow.kelvins() == 0 || workflow.data_len() != 0 || !system_program::check_id(workflow.owner) {
+                    return Ok(());
+                }
+                let payer = self.payer_account().clone();
+                let slug = self.workflow_pda_slug;
+                let (address, bump) = derive_workflow_address(self.program_id, payer.key, slug);
+                if address != *workflow.key {
+                    return Err(ProgramError::InvalidArgument);
+                }
+                let system = self
+                    .accounts
+                    .iter()
+                    .find(|account| system_program::check_id(account.key))
+                    .cloned()
+                    .ok_or(ProgramError::NotEnoughAccountKeys)?;
+                msg!("Merit adopting pre-funded account {} ({} kelvin)", workflow.key, workflow.kelvins());
+                invoke_signed(
+                    &system_instruction::assign(workflow.key, self.program_id),
+                    &[workflow, system],
+                    &[&[WORKFLOW_SEED.as_bytes(), payer.key.as_array(), slug.as_bytes(), &[bump]]],
+                )
+            }
 
             fn open_round(&mut self, start: u64, end: u64) {
                 self.round = self.round.saturating_add(1);
@@ -1277,14 +1401,14 @@ rialo! {
             }
 
             // A ledger that was never opened (no approvals this round) reads
-            // as empty.
+            // as empty, including one a stranger sent kelvin to (v3, audit H-1).
             fn load_ledger(
                 &self,
                 account: &AccountInfo,
             ) -> Result<([rules::Entry; rules::MAX_ENTRIES], [Pubkey; rules::MAX_ENTRIES], usize), ProgramError> {
                 let mut entries = [rules::Entry::EMPTY; rules::MAX_ENTRIES];
                 let mut recipients = [Pubkey::default(); rules::MAX_ENTRIES];
-                if account.kelvins() == 0 && account.data_len() == 0 {
+                if rules::ledger_absent(account.data_len(), account.kelvins(), account.owner == self.program_id) {
                     return Ok((entries, recipients, 0));
                 }
                 let ledger = self.load_state(account)?;

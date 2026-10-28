@@ -577,6 +577,48 @@
                 }
             ],
             "data": "02000000a04269d46bf89f2430f8b1ffb834707bbf520280b13aaff74ff235e0aa0fb3db9fc36072892b3dfd65a33687fa840f043281797c0b7bd8683ff89c4f052bea3e"
+        },
+        {
+            "name": "skip_stuck",
+            "programId": "4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6",
+            "accounts": [
+                {
+                    "pubkey": "BkecjfP5fxz6s3xuAXHPPPxmoebUDkd9DsTeYBZokYwF",
+                    "isSigner": true,
+                    "isWritable": true
+                },
+                {
+                    "pubkey": "ETYZKvZRoubdHi21byk2XEfuG1pcss8GHQ2tu8byE93Q",
+                    "isSigner": false,
+                    "isWritable": true
+                },
+                {
+                    "pubkey": "11111111111111111111111111111111",
+                    "isSigner": false,
+                    "isWritable": false
+                },
+                {
+                    "pubkey": "Subscriber111111111111111111111111111111111",
+                    "isSigner": false,
+                    "isWritable": false
+                },
+                {
+                    "pubkey": "JBBPdFQ3zUZxKpu6sxf1yi8Myq6hBKy5rdt2fsFZUjC9",
+                    "isSigner": false,
+                    "isWritable": true
+                },
+                {
+                    "pubkey": "HGcULqEzEPja5dHtwA7DJ3o1XpZXbuQH172s6uaRurix",
+                    "isSigner": false,
+                    "isWritable": true
+                },
+                {
+                    "pubkey": "G1JjiebaNvYQVBN4tscddqdKRZLfjJR2pgTVrBScx2TN",
+                    "isSigner": false,
+                    "isWritable": false
+                }
+            ],
+            "data": "1c000000030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dcdef35bcfe02b0e9e3266301a191f465feb062db6e1a4b117adffb38cfaab7c85"
         }
     ]
 }

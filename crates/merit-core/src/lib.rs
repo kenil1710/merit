@@ -43,6 +43,9 @@ pub const MAX_SUBMIT_GRACE_MS: u64 = 3_600_000;
 pub const HOUR_MS: u64 = 3_600_000;
 pub const DAY_BUCKETS: usize = 24;
 pub const MAX_COOLDOWN_MS: u64 = 30 * 86_400_000;
+/// Program v3: settlement that has made no progress for this long is stuck
+/// (a step keeps failing); the owner may then skip the step that fails.
+pub const STUCK_MS: u64 = 600_000;
 
 pub mod kind {
     pub const CAMPAIGN: u64 = 1;
@@ -737,6 +740,36 @@ pub fn decode_hex(text: &str) -> Option<Vec<u8>> {
         .chunks(2)
         .map(|pair| Some(nibble(pair[0])? << 4 | nibble(pair[1])?))
         .collect()
+}
+
+/// Program v3 (audit H-1). Whether an account at a round's ledger address
+/// reads as "no ledger": nothing there, or only kelvin someone sent to the
+/// predictable address before the agent opened it. Such an account has no
+/// data and is not owned by the program; a real ledger always has both.
+pub fn ledger_absent(data_len: usize, kelvins: u64, owned_by_program: bool) -> bool {
+    data_len == 0 && (kelvins == 0 || !owned_by_program)
+}
+
+/// Program v3 (audit M-1). Settlement is stuck when the campaign has been
+/// settling with no successful step for `STUCK_MS`.
+pub fn settlement_stuck(phase_now: u64, last_progress_ms: u64, now_ms: u64) -> bool {
+    phase_now == phase::SETTLING && now_ms >= last_progress_ms.saturating_add(STUCK_MS)
+}
+
+/// Program v3 (audit M-2). A ledger keeps its own copy of the round window. If
+/// the owner shortened the round after the ledger opened (`close_round`, `end`),
+/// the ledger takes the campaign's earlier end, so a post written after the
+/// early close can only belong to the next round.
+pub fn synced_round_end(ledger_end_ms: u64, campaign_end_ms: u64) -> u64 {
+    ledger_end_ms.min(campaign_end_ms)
+}
+
+/// Program v3 (audit M-3). While a closed round is being settled (or waits for
+/// funds or the owner's approval) the owner can't change what it pays: the
+/// 24-hour cap and the approval threshold stay as they were when it closed.
+pub fn limits_change_allowed(phase_now: u64, max_per_day: (u64, u64), approval_threshold: (u64, u64)) -> bool {
+    let settling = matches!(phase_now, phase::SETTLING | phase::WAITING_FUNDS | phase::AWAITING_APPROVAL);
+    !settling || (max_per_day.0 == max_per_day.1 && approval_threshold.0 == approval_threshold.1)
 }
 
 /// Seed of a round ledger's workflow PDA. Longer than a Rialo `Nonce`, so

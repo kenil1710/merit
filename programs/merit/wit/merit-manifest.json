@@ -1783,6 +1783,96 @@
           }
         ]
       }
+    },
+    "skip_stuck": {
+      "discriminant": 28,
+      "parameters": [
+        {
+          "name": "workflow_pda_slug",
+          "type": "nonce",
+          "description": "[u8; 32] - Unique identifier for this workflow instance"
+        },
+        {
+          "name": "ledger",
+          "type": "pubkey",
+          "description": "User-provided pubkey"
+        }
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "source": "parameter",
+          "is_signer": true,
+          "is_writable": true,
+          "description": "The account that pays for rent and signs the transaction"
+        },
+        {
+          "name": "workflow_pda",
+          "source": "derived",
+          "derivation": "workflow_pda",
+          "is_signer": false,
+          "is_writable": true,
+          "owner": "program_id",
+          "min_data_size": 256,
+          "description": "PDA that stores workflow state"
+        },
+        {
+          "name": "system_program",
+          "source": "well_known",
+          "well_known": "system_program",
+          "is_signer": false,
+          "is_writable": false,
+          "is_executable": true,
+          "description": "Solana system program"
+        },
+        {
+          "name": "subscriber_interface",
+          "source": "well_known",
+          "well_known": "subscriber_interface",
+          "is_signer": false,
+          "is_writable": false,
+          "is_executable": true,
+          "description": "Rialo subscriber interface program"
+        },
+        {
+          "name": "subscription_pda_0",
+          "source": "derived",
+          "derivation": "subscription_pda",
+          "is_signer": false,
+          "is_writable": true,
+          "description": "Subscription PDA 0 for timer/event tracking"
+        },
+        {
+          "name": "subscription_pda_1",
+          "source": "derived",
+          "derivation": "subscription_pda",
+          "is_signer": false,
+          "is_writable": true,
+          "description": "Subscription PDA 1 for timer/event tracking"
+        },
+        {
+          "name": "ledger",
+          "source": "parameter",
+          "parameter": "ledger",
+          "is_signer": false,
+          "is_writable": false,
+          "description": "Account from parameter 'ledger'"
+        }
+      ],
+      "serialization": {
+        "format": "bincode",
+        "enum_variant": 28,
+        "fields": [
+          {
+            "name": "workflow_pda_slug",
+            "type": "bytes32"
+          },
+          {
+            "name": "ledger",
+            "type": "bytes32"
+          }
+        ]
+      }
     }
   },
   "callbacks": {

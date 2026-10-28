@@ -45,6 +45,7 @@ const built: Record<string, ReturnType<typeof ix.start>> = {
   revoke: ix.revoke(AGENT, lslug, CAMPAIGN, 2n),
   open_payee: ix.openPayee(AGENT, pslug, CAMPAIGN, X_USER, CONTRIBUTOR),
   set_payee: ix.setPayee(AGENT, pslug, OWNER),
+  skip_stuck: ix.skipStuck(OWNER, slug, CAMPAIGN),
 };
 
 describe("instruction builders match the Rust builders Venus generates", () => {

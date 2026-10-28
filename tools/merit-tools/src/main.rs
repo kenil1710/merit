@@ -89,6 +89,7 @@ fn vectors() {
         ("revoke", ix::revoke(&program, &agent, ledger_nonce, campaign, 2)),
         ("open_payee", ix::open_payee(&program, &agent, payee_nonce, campaign, 1_658_044_857_343_000_579, contributor, rex)),
         ("set_payee", ix::set_payee(&program, &agent, payee_nonce, owner)),
+        ("skip_stuck", ix::skip_stuck(&program, &owner, slug, campaign)),
     ];
     let mut out = Vec::new();
     for (name, instruction) in cases {
