@@ -557,7 +557,10 @@ These tests send invalid instructions to Merit's own program, which must reject 
 - **Fake data:** posts use ids no X post has (`10000000000000000NN`). Their REX checks fail verification, so nothing
   in this test is ever paid.
 
-**Result: every invalid instruction was rejected.**
+**Result: 30 invalid instructions were sent. 29 were rejected on chain. The 30th, the first forged `on_verify`,
+arrived after its entry had already finished its own REX check, so the handler ignored it: it landed as a no-op
+(`4yKznKPm…`, no error, entry unchanged) and proves nothing either way. Its timed retry against a still-pending entry
+(`5VjnEga…`, counted among the 29) was rejected, which is what proves the report binding.**
 
 | Case | Result | Merit's log / error | Signature |
 | --- | --- | --- | --- |
@@ -578,7 +581,7 @@ These tests send invalid instructions to Merit's own program, which must reject 
 | approve: x_user_id 0 | rejected | Merit rejected approval of post 1000000000000000001: ZeroId | `56UhTZLNsX8xeT7k…` |
 | stranger: approve on A's ledger (not the ledger agent) | rejected | Merit rejected instruction: not the ledger agent | `37YeHP6bJhEYpUpm…` |
 | approve: alice again, 0.05 + 0.05 over her 0.08 RLO per-contributor cap | rejected | Merit rejected approval of post 1000000000000000005: ContributorCap | `2RJXFTf17Z6AeUZk…` |
-| on_verify for entry 1 called directly with entry 0's real REX report | not conclusive (see below) |  | `4yKznKPmdNDoYDQB…` |
+| on_verify for entry 1 called directly with entry 0's real REX report | **not rejected**: landed as a no-op (entry 1 was no longer pending; see below) | no Merit log, no error | `4yKznKPmdNDoYDQB…` |
 | approve naming campaign A in its data but passing campaign B's account | rejected | {"InstructionError":[0,"NotEnoughAccountKeys"]} | `5PJAFNL67xykpmFs…` |
 | approve: the same post again (duplicate) | rejected | Merit rejected approval of post 1000000000000000001: DuplicatePost | `52xvnMzhRG8WKDyf…` |
 | approve: alice's X account with a different wallet (identity mismatch) | rejected | Merit rejected approval of post 1000000000000000004: IdentityMismatch | `2QeZd8GS5cVA3fYo…` |
@@ -590,8 +593,7 @@ These tests send invalid instructions to Merit's own program, which must reject 
 | approve inside the payee's 1-hour cooldown | rejected | Merit rejected approval: wallet registered at 1793090852882, cooldown 3600000 ms | `gBtDKjJ7qLFR2JA5…` |
 | stranger: open a payee for A (not A's agent) | rejected | {"InstructionError":[0,"InvalidArgument"]} | `31yvGwqiHXhzbosy…` |
 | approve while the campaign is paused | rejected | Merit rejected approval: round 1 is closed or the campaign is paused | `21h91KgDm8re7ipF…` |
-| on_verify for entry 2 called directly with another entry's real REX report (7HTgYemAmku4G74qY3u9uV7TRhMxRt4efaHYV7skJEFh) | rejected | Merit rejected report: not this entry's REX report account | `5VjnEgakhyyPkirT…` |
-| on_verify for pending entry 2, handed entry 0's real REX report (timed retry) | rejected | Merit rejected report: not this entry's REX report account (InvalidAccountData) | `5VjnEgakhyyPkirT…` |
+| on_verify for pending entry 2 called directly with another entry's real REX report (`7HTgYemA…`), timed retry | rejected | Merit rejected report: not this entry's REX report account (InvalidAccountData) | `5VjnEgakhyyPkirT…` |
 
 Notes:
 - **REX report binding and account resolution are proven on chain.**
@@ -616,3 +618,41 @@ Notes:
   0.0406 RLO). The other 0.0594 RLO had repaid the agent for three REX checks and the ledger rent.
 - **Round 32 paid:** the program's settlement timer paid 0.06 RLO for post `2115000077697929331`
   (`24MkbwAh…`, found in ledger `Bo7V…`'s own transactions).
+
+## Audit fixes: H-1 confirmed, program v3 upgraded and tested (2026-10-28)
+
+All on test campaigns owned by `merit-contributor-demo`, with `merit-agent-devnet` and a throwaway stranger key.
+Full signatures: `deployments/devnet-v3-audit.json` (from `apps/web/scripts/negative-devnet.ts` modes `h1`,
+`h1-owner`, `v3`, `v3-stuck`).
+
+**H-1 confirmed on v2.** Test campaign C (`GsqW46Fv…`, 60 s rounds, no approvals): a stranger sent 0.001 RLO to the
+address of C's round-1 ledger before it existed (`5rkobNEt…`; the account then held 1,000,000 kelvin, owned by the
+system program, no data). Round 1 closed (`58k9f3DS…`, "settling") and C stayed in `SETTLING` for 4+ minutes. The
+owner's `resume` (`3EBVx3Bp…`) re-armed the same failing step; `refund` was rejected (`3Eub15W9…`). Escrow and
+operations budget were stuck.
+
+**Upgrade to v3 (commit `c4207c8`).** In place at `4qBw…` / `SufL…`, 10:47:45–10:49:04 UTC, right after round 85
+of the live campaign `5LyX…` opened. 100 program + 27 REX transactions, 0.1036 RLO (deployer 2.8273 → 2.7237). The
+upgrade stopped 5LyX's heartbeat as expected; `resume` (`5zAhkoFq…`, epoch 88) restarted it, and beats continued
+(13 → 18 in 30 s). 5LyX decodes unchanged under v3 (no layout change).
+
+| Case (v3) | Result | Merit's log | Signature |
+| --- | --- | --- | --- |
+| M-1: owner `skip_stuck` on C, stuck since v2 | accepted; C left `SETTLING` and opened round 2 | | `3mV8rmLo…` |
+| M-1: `skip_stuck` while D's round is open | rejected | Merit rejected skip_stuck: settlement is not stuck | `3wir2iQn…` |
+| H-1: D's round-1 and round-2 ledger addresses pre-funded by the stranger; round 1 settles anyway | round 2 opened | | `YHxoHNvN…`, `5xY9ixhv…` |
+| H-1: agent opens round 2's ledger at its pre-funded address | accepted | Merit adopting pre-funded account 3EU72qie… (1000000 kelvin) | `3P2mQttk…` |
+| M-2: `close_round` after the ledger opened, then `approve` in the grace | ledger end synced to the early close (1793184814711) | Merit ledger round 2 now ends at 1793184814711 (closed early) | `4EiDFAmY…` |
+| M-3: `set_limits` lowering the daily cap while settling | rejected | Merit rejected set_limits: the daily cap and approval threshold are fixed while a round settles | `5jojnG1h…` |
+| M-3: `set_limits` adding an approval threshold while settling | rejected | same | `4CHYkXgA…` |
+| M-3: `set_limits` changing only the cooldown while settling | accepted | | `5XdvBzxy…` |
+| M-1: `skip_stuck` while settlement makes progress | rejected | Merit rejected skip_stuck: settlement is not stuck | `34zb4A38…` |
+| M-1: `refund` from a `SETTLING` that isn't stuck | rejected | | `3SMp6XMr…` |
+| stranger: `skip_stuck` on D | rejected | Merit rejected instruction: not the campaign owner | `5oubQmGP…` |
+
+The adopted ledger `3EU72qie…` is now owned by the program, 3,233 bytes, rent topped up by the agent. Cleanup: C and
+D were ended and their escrow and budgets withdrawn to the test owner (C's included, which v2 had frozen).
+
+**After the upgrade:** the full local e2e suite passed 17/17 on DevNet, and the live `public.spec` passed 7/7
+against production.
+

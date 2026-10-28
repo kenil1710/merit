@@ -1,11 +1,12 @@
 # Merit Venus program (`programs/merit`)
 
-Status: **deployed on Rialo DevNet (program v2).** Program id
+Status: **deployed on Rialo DevNet (program v3).** Program id
 `4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6`, REX component `SufLA3Vvm5x7ag2RSctyJhgceMQS1ht8rYAadjdvQvb` (pinned in
 `require_authorized_rex`).
-- **Last in-place upgrade:** 2026-10-26 (`964ba6e`): the REX fetch sends `X-Merit-Campaign`.
-- **Negative tests:** every rejection path is checked on DevNet (`docs/EVIDENCE.md`, "Negative tests";
-  `apps/web/scripts/negative-devnet.ts`).
+- **Last in-place upgrade:** 2026-10-28, program v3 (audit fixes, below). Before that 2026-10-26 (`964ba6e`): the
+  REX fetch sends `X-Merit-Campaign`.
+- **Negative tests:** the rejection paths are checked on DevNet (`docs/EVIDENCE.md`, "Negative tests";
+  `apps/web/scripts/negative-devnet.ts`), including the audit's H-1, M-1, M-2 and M-3 cases on v3.
 
 Built with rialo-venus 0.18.1. The money rules live in `crates/merit-core`: plain Rust,
 no Rialo types, called by the program for every decision, so `cargo test -p merit-core`
@@ -45,7 +46,8 @@ heartbeat (no keeper):
 
 Owner controls: `end`, `withdraw` (unreserved escrow only), `withdraw_ops` (between
 rounds), `refund` (after the deadline), `resume` (re-arm a stopped heartbeat), `set_agent`,
-`set_round_length` (60 s to 7 days, applies to the next round).
+`set_round_length` (60 s to 7 days, applies to the next round), `skip_stuck` (v3: past a settlement step
+that keeps failing).
 
 ## Rules enforced on chain
 
@@ -59,8 +61,11 @@ rounds), `refund` (after the deadline), `resume` (re-arm a stopped heartbeat), `
 - **REX verification** (`fetch_post`, `http::get` from every validator): the report counts
   only if at least 3 validator outputs exist and all are byte-identical successes. The
   post must be the approved id, written by the approved X user id, and created inside
-  the round. Since a post's creation time falls in exactly one round, it can never be
-  paid twice.
+  the round. A post's creation time falls in exactly one round's window, so it can't be
+  paid in two rounds. Before program v3 that failed after an early close: a ledger kept its
+  original end while the next round started at the early close, so a post written in
+  between fit both (audit M-2). v3 syncs the ledger's end to the campaign's on every
+  `approve` and `retry_verify`. Within a round, `DuplicatePost` refuses the same post twice.
 - **Report authenticity:** `on_verify` accepts only the processor-owned report PDA
   recorded in `run_verify` for that entry (see "REX report binding" below).
 - **Settlement order:** strictly in approval order. A verified entry the escrow cannot
@@ -84,8 +89,9 @@ the REX request. The agent is the creator and payer (0.0115 RLO each), and the e
 - **The agent can't fake the result.** The callback accepts only the report at the PDA
   recorded for that entry, owned by the REX processor, and the campaign pays only
   entries that report verified.
-- **A misbehaving agent's damage is bounded.** It can approve within the caps and spend
-  the operations budget, and nothing more.
+- **A misbehaving agent's damage is bounded.** It can approve within the caps, spend
+  the operations budget, and `revoke` unpaid entries (withholding those payouts). It can't
+  change an amount, pay an unverified entry, or redirect a payout.
 
 ## REX report binding
 
@@ -114,7 +120,7 @@ Adds, all enforced on chain:
 
 | Instruction | Who | What |
 | --- | --- | --- |
-| `pause` / `unpause` | owner | Stops approvals and payouts. The round clock keeps running; a closed round waits to settle. |
+| `pause` / `unpause` | owner | Stops approvals and payouts (a payout already scheduled too, since v3). The round clock keeps running; a closed round waits to settle. |
 | `close_round` | owner | Ends the open round now without ending the campaign; the next one opens on its own. |
 | `set_limits(max_per_day, approval_threshold, cooldown_ms, submit_grace_ms)` | owner | Rolling 24-hour cap (hourly buckets, checked at approval and at payout), owner approval above a round total, payee cooldown, late-submission grace. |
 | `approve_round` | owner | A round above the threshold sits in phase 6 (`AWAITING_APPROVAL`) until this. |
@@ -129,9 +135,30 @@ where the last one ended (back-dated at most one round), so every post belongs t
 decodes under v2. Live v1 campaigns were therefore ended and withdrawn before the upgrade, and replaced by new v2
 campaigns. The web decoder reads both layouts.
 
-## Instruction tags (bincode u32 LE prefix, program v2)
+## Program v3 (2026-10-28, audit fixes)
 
-From `wit/merit-manifest.json`; every tag moved in v2.
+No state layout change and no existing instruction changed (the vectors are byte-identical), so live v2 campaigns
+keep decoding and v3 was upgraded in place.
+
+| Finding | Change |
+| --- | --- |
+| H-1: pre-funding a ledger address froze settlement | An account at the ledger address with no data that the program doesn't own (`merit_core::ledger_absent`) reads as "no approvals"; `open_ledger` and `open_payee` assign a pre-funded, empty, system-owned PDA to the program before Venus writes it (Venus's `create_account` fails on an address that holds kelvin). |
+| M-1: no way out of a stuck `SETTLING` | `skip_stuck(ledger)` (owner): after `STUCK_MS` (10 min) with no settlement step succeeding, it skips the step that keeps failing (the agent's reimbursement, or the next payout, recorded `UNFUNDED`), or ends the round with nothing paid if its ledger can't be read, then re-arms settlement. `refund` also accepts a stuck `SETTLING`. A payout to an executable account is recorded `UNFUNDED` instead of failing. While settling, `last_beat_ms` is the time of the last step that succeeded. |
+| M-2: a post could verify in two rounds after `close_round` | `approve` and `retry_verify` sync the ledger's round end to the campaign's (`synced_round_end`). |
+| M-3: limits changed after a round closed | `set_limits` can't change `max_per_day` or `approval_threshold` while the campaign is `SETTLING`, `WAITING_FUNDS` or `AWAITING_APPROVAL` (`limits_change_allowed`); cooldown and grace still can. |
+| L-7: pause didn't stop a scheduled payout | `settle_pay` pays nothing while paused (before the deadline); `settle_peek` waits. |
+
+**Owner powers, stated plainly.** The owner can pause (payouts wait), end, withdraw escrow no open round reserves,
+and set the daily cap and the round-approval threshold between rounds. A round above the threshold waits for
+`approve_round`; if the owner never approves it, the deadline refund returns the escrow and the round's entries stay
+unpaid (`TODO`) on chain. `skip_stuck` records the skipped payout as `UNFUNDED`.
+
+**Still open:** a `refund` from `WAITING_FUNDS`, `AWAITING_APPROVAL` or a stuck `SETTLING` doesn't mark verified
+entries `UNFUNDED` (it has no ledger account to read), so they stay `TODO`.
+
+## Instruction tags (bincode u32 LE prefix, programs v2 and v3)
+
+From `wit/merit-manifest.json`; every tag moved in v2; v3 only added `skip_stuck` (28).
 
 | Instruction | Tag |
 | --- | --- |
@@ -141,6 +168,7 @@ From `wit/merit-manifest.json`; every tag moved in v2.
 | set_agent / set_round_length | 17 / 18 |
 | pause / unpause / close_round / set_limits / approve_round | 19 / 20 / 21 / 22 / 23 |
 | **approve** / retry_verify / revoke | **24** / 25 / 26 |
+| skip_stuck (v3) | 28 |
 | callbacks: on_verify 0, run_verify 1, beat 4, settle_pay 7, settle_reimburse 8, settle_peek 27 | |
 
 ## Agent key

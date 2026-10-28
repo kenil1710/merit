@@ -1,0 +1,577 @@
+{
+ "date": "2026-10-28",
+ "program": "4qBwWYWn7ougS7sHP21x4yTDk4cwmyEqUiqNmKAYVuk6",
+ "owner": "GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN (merit-contributor-demo)",
+ "agent": "8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz",
+ "campaignC": "GsqW46Fv8nkZAT43dHePYMDisL7QHQoJNqo1cp7bbzST",
+ "campaignD": "4Qxr9n3bszqF22KcfBggxjHGZtPxR9GKp8f4AoE57oPo",
+ "upgrade": {
+  "at": "2026-10-28T10:47:45Z",
+  "commit": "c4207c8",
+  "costRlo": "0.10359264",
+  "resume5LyX": "5zAhkoFqdVWoZHwD4zWQU1xybtRdypAQGi79ihtD2SwS7xgNS5GodjJzKDs8pVJxh7uHAsmDNb3diAEUrzSxyNj4"
+ },
+ "cases": [
+  {
+   "case": "setup: create test campaign C (60 s rounds)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "54Cih2him5JU2cmjbY3nE3QFb2A1WymvwXdneM41VwxemnrkvaQ37iGnyYXrJYRSmoviaw86ch4tL4SGioV2hG5y",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit campaign GsqW46Fv8nkZAT43dHePYMDisL7QHQoJNqo1cp7bbzST created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: fund C 0.02 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "63vJf3p9MJVw3BqnpnASyuihxqGotMxt3JcrpusRFGjPm5iYPVKPGgrA6t5BGYppYHtGK6WWZ5awE2ab6YgcqrbU",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit escrow funded with 20000000 kelvin (escrow 20000000)"
+   ]
+  },
+  {
+   "case": "setup: fund C's operations budget 0.02 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "L53jAbaZcwQaNxd65XVYrT1Y6gWLKwU6fvYEizbfE8b9ZFz24aUJMYZyhYR8vV4kvAg96coC2DJZE9UPJeFEPox",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit operations budget funded with 20000000 kelvin (budget 20000000, ~1 verifications)"
+   ]
+  },
+  {
+   "case": "v2: stranger: pre-fund C's round-1 ledger address (H-1)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5rkobNEtwGkniRdoRMTgcr181XcmyB5TdhHM8qGRZwGBd7V47CNXtjCGBwakA1uYjMwM5deANoyowiDZz8PwzeC7",
+   "ok": true,
+   "err": null,
+   "merit": []
+  },
+  {
+   "case": "setup: start C (round 1)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2sJgWbsRagSUeSUmsCNtJVEKUxHiVprWrPFNucru6mjfciJaGdT11S1WSVgweQVUbjacjC9GRdP8EPtb5Gagb9u6",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit round 1 open until 1793182749099 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "H-1 confirmed on v2 (before the fix): campaign C after a stranger pre-funded its round-1 ledger",
+   "expect": "settles and opens round 2",
+   "pass": false,
+   "phase": "2",
+   "round": "1",
+   "recent": [
+    {
+     "signature": "58k9f3DSMZX9YR2kj1JT1vyWUgGBfpFPtcCXXoiq2TZ2qv4Ur3WrdFAwhVZPCVzSeQPeMHjnD1yVRzy7TftczqSX",
+     "err": null,
+     "merit": [
+      "Merit round 1 closed after 13 beats; settling"
+     ]
+    },
+    {
+     "signature": "5h9a5bYpd8inR2fEHuRdw6mE8niymFgefadCzU2hkqfPdPwcBxrkv8KjXANWyLCM9tLBhqELtJpmdra4Mg6kBpw9",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2GP8WoxggX6T2uCr2qFycofaQA8XTbmQ6yQ3QmToyHS7nmBZy9ZLhDZ8ZRbmH7BYGBnCe1cFeD72ErMV1q8Vvvvb",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "3xynT9kz8ZdKWt4YfzNEAJXn35BXwka5HQQPEUFc9XYxkMeh2bkHsT1CEnUHBUSHTbUctvvjrr3bas2jcasRt1RR",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "4yWiC3pMNka8M7ayZsZyquuT2tvi3HaMCqejzbFBZFoPK4Reux6iiS9V6x4KXPSRrrMENwWukcrXMZg1WF9fWz5m",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "5cZB5MWUfXRfoeYNtkAZvAVxjQDiJdAHYEVC8ddRzKapaHmtihkH8EREKFwYv8m6t8snF7DqC8s4qZxpNXQ3u2nB",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "EkPK4xBaNpjRQ1t3nBtyjSLdXyHfJvLrWEmZXYrgPuoQcfHSHNRk9njLEWpFXMqmyawTHHhcwurxX68iiXziBEo",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "25npgDBhMwgXhumyAfs2P7Xhhu249zLRnsD6rvkGaBNfVU8mj8nWcFDQV1URwBNj9UdZb2FxZrDVbNjp8fT3wkvb",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2BPqUGsDuTGntbwqxqMxAi5da5NNQTLHgnewFz5Zn7Rdzm3nfhfYAXiMqAvDPszLo4p4YHiRoSp3drZHfpiaBJxf",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2eYbzRpSDjoCqi8UtV5qKBFqgGoxKMo3Pi9X5hKAyHm9Rp6twR5d6HTjJ6rDEnh1zxu4jWC1cXwBK5MMZcG7GaxF",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "5XSKxGCS1U5qqBKgqiDTeedb5juwoHEz6kJNf1iks4VWRtT2Su55whRqt98uW5jbQHYHSqtVXJuHoc94HNy57xX9",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "3srw3oYcXt1Tuv6udSmVNxP5voWN62uxMPDH2EKaY9ev6rz7vSZcYo4HKB98ftvK6eukxgbQyJxEmi4XdNgp4idD",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2RTJQ4DzdmdAvoGeMdHyqz5QS9N5z39BpYFY4a9pZmes8QDB2NHuEQikJrBxAPnxGgzZCTUeDgwMXtd75HeCqwqy",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2sJgWbsRagSUeSUmsCNtJVEKUxHiVprWrPFNucru6mjfciJaGdT11S1WSVgweQVUbjacjC9GRdP8EPtb5Gagb9u6",
+     "err": null,
+     "merit": [
+      "Merit round 1 open until 1793182749099 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+     ]
+    },
+    {
+     "signature": "L53jAbaZcwQaNxd65XVYrT1Y6gWLKwU6fvYEizbfE8b9ZFz24aUJMYZyhYR8vV4kvAg96coC2DJZE9UPJeFEPox",
+     "err": null,
+     "merit": [
+      "Merit operations budget funded with 20000000 kelvin (budget 20000000, ~1 verifications)"
+     ]
+    },
+    {
+     "signature": "63vJf3p9MJVw3BqnpnASyuihxqGotMxt3JcrpusRFGjPm5iYPVKPGgrA6t5BGYppYHtGK6WWZ5awE2ab6YgcqrbU",
+     "err": null,
+     "merit": [
+      "Merit escrow funded with 20000000 kelvin (escrow 20000000)"
+     ]
+    },
+    {
+     "signature": "54Cih2him5JU2cmjbY3nE3QFb2A1WymvwXdneM41VwxemnrkvaQ37iGnyYXrJYRSmoviaw86ch4tL4SGioV2hG5y",
+     "err": null,
+     "merit": [
+      "Merit campaign GsqW46Fv8nkZAT43dHePYMDisL7QHQoJNqo1cp7bbzST created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+     ]
+    }
+   ],
+   "note": "pass:false is the vulnerability: C stayed in SETTLING (phase 2); resume and refund did not help"
+  },
+  {
+   "case": "v2: H-1: owner resume on stuck C (re-arms settle_peek)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3EBVx3BpN8dPVRZXFDutkYzGzynvvd78BfqmKoc6NWo3q3zbxQVPBVT2RFp3kPQm1DvCEo9T7RNVPJdmAfYwr2im",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit heartbeat resumed (epoch 2)"
+   ]
+  },
+  {
+   "case": "v2: H-1: owner refund on stuck C (SETTLING, before the deadline)",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3Eub15W9Wqqkm36fitgStsm6Naz8K12ogT5JPMV66B1rqumMpq8KpcK9FpKxwYbNxk9TBkRtHx6XtAYSfjybvkTs",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": []
+  },
+  {
+   "case": "H-1 confirmed on v2 (before the fix): campaign C after a stranger pre-funded its round-1 ledger",
+   "expect": "settles and opens round 2",
+   "pass": false,
+   "phase": "2",
+   "round": "1",
+   "recent": [
+    {
+     "signature": "3EBVx3BpN8dPVRZXFDutkYzGzynvvd78BfqmKoc6NWo3q3zbxQVPBVT2RFp3kPQm1DvCEo9T7RNVPJdmAfYwr2im",
+     "err": null,
+     "merit": [
+      "Merit heartbeat resumed (epoch 2)"
+     ]
+    },
+    {
+     "signature": "58k9f3DSMZX9YR2kj1JT1vyWUgGBfpFPtcCXXoiq2TZ2qv4Ur3WrdFAwhVZPCVzSeQPeMHjnD1yVRzy7TftczqSX",
+     "err": null,
+     "merit": [
+      "Merit round 1 closed after 13 beats; settling"
+     ]
+    },
+    {
+     "signature": "5h9a5bYpd8inR2fEHuRdw6mE8niymFgefadCzU2hkqfPdPwcBxrkv8KjXANWyLCM9tLBhqELtJpmdra4Mg6kBpw9",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2GP8WoxggX6T2uCr2qFycofaQA8XTbmQ6yQ3QmToyHS7nmBZy9ZLhDZ8ZRbmH7BYGBnCe1cFeD72ErMV1q8Vvvvb",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "3xynT9kz8ZdKWt4YfzNEAJXn35BXwka5HQQPEUFc9XYxkMeh2bkHsT1CEnUHBUSHTbUctvvjrr3bas2jcasRt1RR",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "4yWiC3pMNka8M7ayZsZyquuT2tvi3HaMCqejzbFBZFoPK4Reux6iiS9V6x4KXPSRrrMENwWukcrXMZg1WF9fWz5m",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "5cZB5MWUfXRfoeYNtkAZvAVxjQDiJdAHYEVC8ddRzKapaHmtihkH8EREKFwYv8m6t8snF7DqC8s4qZxpNXQ3u2nB",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "EkPK4xBaNpjRQ1t3nBtyjSLdXyHfJvLrWEmZXYrgPuoQcfHSHNRk9njLEWpFXMqmyawTHHhcwurxX68iiXziBEo",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "25npgDBhMwgXhumyAfs2P7Xhhu249zLRnsD6rvkGaBNfVU8mj8nWcFDQV1URwBNj9UdZb2FxZrDVbNjp8fT3wkvb",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2BPqUGsDuTGntbwqxqMxAi5da5NNQTLHgnewFz5Zn7Rdzm3nfhfYAXiMqAvDPszLo4p4YHiRoSp3drZHfpiaBJxf",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2eYbzRpSDjoCqi8UtV5qKBFqgGoxKMo3Pi9X5hKAyHm9Rp6twR5d6HTjJ6rDEnh1zxu4jWC1cXwBK5MMZcG7GaxF",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "5XSKxGCS1U5qqBKgqiDTeedb5juwoHEz6kJNf1iks4VWRtT2Su55whRqt98uW5jbQHYHSqtVXJuHoc94HNy57xX9",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "3srw3oYcXt1Tuv6udSmVNxP5voWN62uxMPDH2EKaY9ev6rz7vSZcYo4HKB98ftvK6eukxgbQyJxEmi4XdNgp4idD",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2RTJQ4DzdmdAvoGeMdHyqz5QS9N5z39BpYFY4a9pZmes8QDB2NHuEQikJrBxAPnxGgzZCTUeDgwMXtd75HeCqwqy",
+     "err": null,
+     "merit": []
+    },
+    {
+     "signature": "2sJgWbsRagSUeSUmsCNtJVEKUxHiVprWrPFNucru6mjfciJaGdT11S1WSVgweQVUbjacjC9GRdP8EPtb5Gagb9u6",
+     "err": null,
+     "merit": [
+      "Merit round 1 open until 1793182749099 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+     ]
+    },
+    {
+     "signature": "L53jAbaZcwQaNxd65XVYrT1Y6gWLKwU6fvYEizbfE8b9ZFz24aUJMYZyhYR8vV4kvAg96coC2DJZE9UPJeFEPox",
+     "err": null,
+     "merit": [
+      "Merit operations budget funded with 20000000 kelvin (budget 20000000, ~1 verifications)"
+     ]
+    },
+    {
+     "signature": "63vJf3p9MJVw3BqnpnASyuihxqGotMxt3JcrpusRFGjPm5iYPVKPGgrA6t5BGYppYHtGK6WWZ5awE2ab6YgcqrbU",
+     "err": null,
+     "merit": [
+      "Merit escrow funded with 20000000 kelvin (escrow 20000000)"
+     ]
+    },
+    {
+     "signature": "54Cih2him5JU2cmjbY3nE3QFb2A1WymvwXdneM41VwxemnrkvaQ37iGnyYXrJYRSmoviaw86ch4tL4SGioV2hG5y",
+     "err": null,
+     "merit": [
+      "Merit campaign GsqW46Fv8nkZAT43dHePYMDisL7QHQoJNqo1cp7bbzST created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+     ]
+    }
+   ],
+   "note": "pass:false is the vulnerability: C stayed in SETTLING (phase 2); resume and refund did not help"
+  },
+  {
+   "case": "M-1 v3: owner skip_stuck on the stuck campaign C",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3mV8rmLoyL5Lx4ZxumAgPkyjS9KxLdLbFxKUCWVwrz3qBJbNpPvA7VX8FBW1wp8D6Q9p68EpSD9x1GqGEm3JbTAz",
+   "ok": true,
+   "err": null,
+   "merit": []
+  },
+  {
+   "case": "M-1 v3: a stuck campaign leaves SETTLING after skip_stuck",
+   "expect": "next round or ended",
+   "pass": true,
+   "phase": "1",
+   "round": "2"
+  },
+  {
+   "case": "setup: create test campaign D (60 s rounds)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "25Ty4hYGaLRfZ8JF9WGDitvEYaqytqbXGb7DhCU84LnM5ZTGHtWLf4gz9o7P9ZwiA9R3QEE5nFNStat527xpQvCp",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit campaign 4Qxr9n3bszqF22KcfBggxjHGZtPxR9GKp8f4AoE57oPo created by GZCkutEHercaeY728xVqiPTNSgGgAercDAb9JTXXnePN with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "setup: fund D 0.02 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "4iEg2JHC6VGTgyvov4xbmDmoPPKKS51djAMkJ1tdKrpg7xebo3AqHepjgUB7kqZCND1yRunUbiT8s6uPVH6DcwU2",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit escrow funded with 20000000 kelvin (escrow 20000000)"
+   ]
+  },
+  {
+   "case": "setup: fund D's operations budget 0.05 RLO",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "249btQJn1DE5ukuERRKq5RjnwwBydcwx3SktYKX8sUtuE1HN3qY7VVnnHp16NJf5mhFRAK9dkt3CfPseeYUCj78x",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit operations budget funded with 50000000 kelvin (budget 50000000, ~4 verifications)"
+   ]
+  },
+  {
+   "case": "stranger: pre-fund D's round-1 ledger address",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "YHxoHNvNmkE8PP6oxvMBCHWMjcMESDKzpYts5qKZMcfhFSA5twFQYDsTkCqWe26XmG4eYgSyGMWybCz1CQn6i3K",
+   "ok": true,
+   "err": null,
+   "merit": []
+  },
+  {
+   "case": "stranger: pre-fund D's round-2 ledger address",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5xY9ixhved8yFDSHfC9JksfPkTrbdh5f6iLApTGYptwrfhUDA2vmzLUgHVLDZ8FAydTmbx3fuRMLuHwzgAadboMR",
+   "ok": true,
+   "err": null,
+   "merit": []
+  },
+  {
+   "case": "setup: start D (round 1)",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "23pPGv4Z15Z8UY9MLTkWDsiUgmkCaJSsBnKADptsTf6KH5bZPWoumJDMpvWnKMceu4QKW6DSttM1SmfgooyFtYiA",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit round 1 open until 1793184770261 with agent 8f4gqYbvcaxFyGo7x6zZWxBQU8ycxtppw54J9saw2iaz"
+   ]
+  },
+  {
+   "case": "M-1 v3: skip_stuck while the round is open",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3wir2iQn1i6T1dZ1LpSRYv44uhtCwdtsjq5DaEno8DSsBrPap8JVuSuGVkS2qoMsosUDMuSpqeP1X55kzrftmFoP",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected skip_stuck: settlement is not stuck"
+   ]
+  },
+  {
+   "case": "H-1 v3: a round whose ledger address a stranger pre-funded settles and opens the next round",
+   "expect": "round 2 open",
+   "pass": true,
+   "round": "2"
+  },
+  {
+   "case": "H-1 v3: agent opens a ledger at a pre-funded address",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "3P2mQttkgyQ3kaxuhGahgmtbN7HW6nSkfsdgjJs7DdLty2Pt26VmwvArrqkAie56kcvmqdgwre5gx2FyMthx7eMi",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit adopting pre-funded account 3EU72qieShBQ3hfcywuEQUudf1b1xDBYjnvXmARPZQwV (1000000 kelvin)",
+    "Merit ledger opened for campaign 4Qxr9n3bszqF22KcfBggxjHGZtPxR9GKp8f4AoE57oPo round 2"
+   ]
+  },
+  {
+   "case": "setup: owner closes D's round 2 early",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5GUWmaKk1hj8H2fkyzCsmV77EmChyFxdN34ytbUWYnD8YuUnkzwCusfpMPJn81Rp7qZ5Ham3attFCtFFw6Vf5tK7",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit round 2 closed early by the owner at 1793184814711"
+   ]
+  },
+  {
+   "case": "M-2 v3: approve after close_round (inside the grace) syncs the ledger's end",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "4EiDFAmYCheSRfLk73fvsGvngDtTNqpFA23AMyuVHAm59AcahSUEnDYdggqjcGvbkABYLyFXbsMizq7aUzXvppB5",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit ledger round 2 now ends at 1793184814711 (closed early)",
+    "Merit approved post 1000000000000000077 by X user 77: score 100 -> 10000000 kelvin (entry 0)"
+   ]
+  },
+  {
+   "case": "M-2 v3: ledger round_end_ms equals the campaign's after an early close",
+   "expect": "1793184814711",
+   "pass": true,
+   "ledgerEnd": "1793184814711",
+   "merit": [
+    "Merit ledger round 2 now ends at 1793184814711 (closed early)",
+    "Merit approved post 1000000000000000077 by X user 77: score 100 -> 10000000 kelvin (entry 0)"
+   ]
+  },
+  {
+   "case": "M-3 v3: set_limits lowering the daily cap while a round settles",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5jojnG1h7T2JREydUtGMrnU8yZSav6bSkNPW1Cv6T4dRq19XvzQuPhnQYLpEtGkXeEHxrXqEdAHcSLviivqwE1gA",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected set_limits: the daily cap and approval threshold are fixed while a round settles"
+   ]
+  },
+  {
+   "case": "M-3 v3: set_limits adding an approval threshold while a round settles",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "4CHYkXgAuEwJQYg6VCmVAavBr38xUqaTqcWtzX4y31dH2sWvJVrQR4uWnM9gm4yCxjdWeFPqnRFj3pQPBStkgWJt",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected set_limits: the daily cap and approval threshold are fixed while a round settles"
+   ]
+  },
+  {
+   "case": "M-3 v3: set_limits changing only the cooldown while a round settles",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5XdvBzxywUjSgZF5aLHsHoFHJWPNcyzuQzjAeMQmwFByPKheFFobqeXAD9vgF9kDY2Cbh1V3qZmEbNzNYhm21CLe",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit limits: 0 kelvin per 24h, owner approval above 0, cooldown 60000 ms, grace 300000 ms"
+   ]
+  },
+  {
+   "case": "M-1 v3: skip_stuck while settlement is making progress",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "34zb4A38N2kwm9FsEPW7oSMGJjnkzxSU6mJNBHRZTPGCMtfUFiVxmbQ9mQMLnFBEnDARZ31N6iiKw8UkKApWn9nx",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": [
+    "Merit rejected skip_stuck: settlement is not stuck"
+   ]
+  },
+  {
+   "case": "M-1 v3: refund from SETTLING that isn't stuck",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "3SMp6XMrY3UubNLrKKxZAp1CeYd9bJKoAZRzsYh3asB7MGkY1pZoZXgWzheyn8jERophNmHkU8mFYN5risvh3H9E",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"InvalidArgument\"]}",
+   "merit": []
+  },
+  {
+   "case": "stranger: skip_stuck on D",
+   "expect": "rejected",
+   "pass": true,
+   "signature": "5oubQmGPHFfHHQ8WtcByqxZHb7n9wPMHPPrKax48czGMbQ97S3pC8yXfeVMv4VjrAnzTRetiQhZrWugcd9aExyhQ",
+   "ok": false,
+   "err": "{\"InstructionError\":[0,\"MissingRequiredSignature\"]}",
+   "merit": [
+    "Merit rejected instruction: not the campaign owner"
+   ]
+  },
+  {
+   "case": "cleanup: end C",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "4TXVWeM6YVfYbbMBZjZskiwUVrrmwtjVFWPXBf8aMyVjsY5MRmFR1nd3WGcRG7MkptvoFfqnTDq7Vc5qBtF9JeUG",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit campaign ending (phase 1)"
+   ]
+  },
+  {
+   "case": "cleanup: end D",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5sdiAgHPY6kWgUa4LcJKiv3aAqEY1KeLxV9nQ1ihac8HWfx7g7ZSP77BBb34ALzxrtWGekWUFHXKJbbdRUCRLA8L",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit campaign ending (phase 1)"
+   ]
+  },
+  {
+   "case": "cleanup: withdraw D's escrow",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "cBNqufyttChMVvrbhP58P95CpG5p16UxLSSbRxA3js2Xq9j4pL8cdUiLE9ZkxcbteSD2JC4HrH1yiLVcmsjy1Ne",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit owner withdrew 20000000 kelvin (escrow 0)"
+   ]
+  },
+  {
+   "case": "cleanup: withdraw D's operations budget",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "2eni6mxqF3vKie1W9NQPDSfeZ5zLwQW9Lee3ZpJstCJFi8oc7SK6Lkm7uc5oJMsocPJoCdbm6E9LgfDTzop9BMSR",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit owner withdrew 14607440 kelvin of operations budget"
+   ]
+  },
+  {
+   "case": "cleanup: withdraw C's escrow",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "dtf3cEGbKxMwogHtSxgZ1sHLuWHazkfXJ3PRBtP3nk6dQh2ZQUxqJJvKWH96W1L6wbQLKnSvFSmz6eHgpU3Qi7C",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit owner withdrew 20000000 kelvin (escrow 0)"
+   ]
+  },
+  {
+   "case": "cleanup: withdraw C's operations budget",
+   "expect": "accepted",
+   "pass": true,
+   "signature": "5fKGtvja9C6oX3BdqsJbLrZ4o7bXhAH8qKpuBxKDs18jL9PKwNfDUszbzmr3YJiXbB3yT8T27D51wT9DuXP6MVo2",
+   "ok": true,
+   "err": null,
+   "merit": [
+    "Merit owner withdrew 20000000 kelvin of operations budget"
+   ]
+  }
+ ],
+ "note": "Cases up to \"v2: H-1: owner refund\u2026\" ran on program v2 to confirm H-1. The rest ran on v3 after the in-place upgrade."
+}

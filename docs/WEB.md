@@ -7,23 +7,28 @@ Status: **deployed** on Vercel as project `merit` (`https://merit-ruby-two.verce
 
 | Route | What it shows | Data source |
 | --- | --- | --- |
-| `/` Explore | Campaigns with a published name and brief | `getAccountsByOwner(program)` + campaign briefs |
-| `/c/[address]` | Every decision in every round: post, score, judge reasons (hash-checked), the REX proof (each validator's output), verdict, payout, and links to all transactions | campaign and ledger accounts, REX report PDAs, Merit log lines |
+| `/` | Landing: what Merit does, live totals from the chain | campaign accounts |
+| `/explore` | Campaigns with a published name and brief | `getAccountsByOwner(program)` + campaign briefs |
+| `/join` | Programs taking contributors (a directory only) | Neon `programs` |
+| `/join/[slug]` | A program's join page: X sign-in, eligibility, embedded wallet, join with a wallet signature, then submit | session, `/api/contributor/*` |
+| `/c` · `/c/[address]` | A contributor's programs and submissions (a slug); a campaign without a program redirects to its public record | Neon, chain |
+| `/p/[slug]` · `/p/[slug]/rounds/[n]` | Public record: every decision in every round, judge reasons (hash-checked), REX proof per validator, verdict, payout links | campaign and ledger accounts, REX report PDAs, Merit log lines |
 | `/tx/[sig]` | A transaction's Merit log lines and its full program log | `getTransaction` |
-| `/join` Contribute | X sign-in → embedded wallet (create, unlock, faucet) → link wallet to X → submit post → decision | session, `/api/link`, `/api/submit` |
-| `/owner` Run a campaign | Create and fund (escrow + operations budget) and open round 1; per campaign: fund, withdraw unreserved, fund or withdraw ops, round length, open, end, resume, refund. Shows "verifications left" and warns when low | browser-signed transactions via the relay |
-| `/guardrails` | `merit-judge` and `merit-x` capabilities, budget and audit read live; a placeholder card for `merit-payout-signer` | `/.well-known/latch-self/*` |
+| `/app/*` | Owner app: wizard, go-live, submissions and review queue, contributors, rounds, treasury, audit log, settings, metrics | Neon + chain, owner wallet sign-in |
+| `/owner` | The original campaign console (create, fund, open, end, withdraw, resume, refund) | browser-signed transactions via the relay |
+| `/guardrails` | `merit-judge` and `merit-x` capabilities, budget, audit and "try a bad request" probes, read live | `/.well-known/latch-self/*` |
 
 ## Trust boundaries
 
 - **Browser**
   - The embedded wallet is a CDK `Keypair`, encrypted with the user's passphrase (PBKDF2-SHA256, 310k rounds, then AES-GCM) and kept in `localStorage`. The secret key never leaves the browser.
   - Owner instructions are signed in the browser.
-  - Linking X to a wallet signs an off-chain message; there is no transaction.
+  - Joining a program signs an off-chain message naming the X account and the payout wallet (single-use nonce); there is no transaction.
+  - A Content-Security-Policy keeps scripts, styles and every fetch on this site.
 - **`/api/rialo` relay**
   - The browser's only path to DevNet, which sends no CORS headers.
   - Rejects batch requests and allows a fixed list of methods (reads, `sendTransaction`, `requestAirdrop`).
-  - The faucet is capped at 1 RLO per call, with a per-IP throttle.
+  - The faucet is capped at 1 RLO per call: once per wallet per day, a few per network per day, and not for a wallet that holds 1 RLO (all in Neon). The relay as a whole allows 300 calls a minute per network.
   - Program-account listing is limited to Merit's program, and requests and transactions have size caps.
 - **Server (agent)**
   - Holds the DevNet agent key, which opens round ledgers and approves.
@@ -36,6 +41,9 @@ Status: **deployed** on Vercel as project `merit` (`https://merit-ruby-two.verce
 - **Judge record**
   - Serialized as Python-compatible `json.dumps(sort_keys=True)`; its SHA-256 is the `submission_hash` the agent writes on chain.
   - The campaign page recomputes it and shows "Hash matches chain", or a mismatch.
+- **Audit log**
+  - `audit_events` rejects updates and deletes by trigger. The app's database role owns the table, so a compromised
+    server could still drop the trigger; a separate migration role would make the claim hold (not done).
 - **X sign-in**
   - OAuth 2.0 with PKCE (`users.read tweet.read`).
   - The user's token is used once to read their own id and handle, then dropped.
@@ -43,11 +51,21 @@ Status: **deployed** on Vercel as project `merit` (`https://merit-ruby-two.verce
 
 ## Submit pipeline (fails closed)
 
-1. **Signed in** with X, and a **wallet linked** to that account.
-2. **Campaign checks:** it is described, its round is open, and at least 20 s remain.
-3. **Post checks:** the URL is an X status link, the post hasn't been submitted before, it's read through `merit-x`, its author is the signed-in account, and it was created after the round opened. Each check refuses before any money or REX is spent.
-4. **Judge:** deterministic checks run first, then Claude scores the post. A score below the minimum is stored but sends nothing on chain.
-5. **On chain:** the agent opens the round ledger if needed, then sends `approve`. REX verification starts; payment comes from the round's own timer.
+The only path to an approval is the agent (`lib/agent/pipeline.ts`), reached from `/join/[slug]`. The v1
+`/api/submit` and `/api/link` endpoints were retired after the 2026-10-28 audit (H-2) and answer 410.
+
+1. **Member:** signed in with X, joined the program (eligibility minimums met, joining not paused) with a wallet that
+   signed the join message.
+2. **Rate limits:** per X account and per network, counted in Neon (`rate_hits`) so every server instance agrees.
+3. **Post checks:** an X status link by the member, read through `merit-x`, written inside the round (or its grace),
+   not a duplicate URL or a near-duplicate, under the per-round submission limit.
+4. **Judge:** hard flags (including the deterministic prompt-injection check) reject before any model spend; the
+   post is fenced with a random boundary; Claude scores it through `merit-judge`.
+5. **Rules engine:** approve, reject, or send to the owner's review queue (confidence, amount, soft flags). An
+   injection flag always goes to review.
+6. **On chain:** the agent opens the round ledger if needed and sends `approve`; REX verification starts, and the
+   round's own timer pays. A transient failure (X, Latch or the model busy) leaves the submission pending: it is
+   retried once in the request, then by the daily cron backstop (06:00 UTC).
 
 ## Tests
 
@@ -58,7 +76,7 @@ MERIT_LIVE=1 npx vitest run          # + live DevNet: decode round 1; full agent
 npx playwright test                  # e2e on real DevNet (isolated server on :3100, own data dir)
 ```
 
-- **`test/instructions.test.ts`:** each TypeScript builder must match `merit-tools vectors` (the Rust builders Venus generates) account for account and byte for byte. That covers 14 instructions plus the ledger slug.
+- **`test/instructions.test.ts`:** each TypeScript builder must match `merit-tools vectors` (the Rust builders Venus generates) account for account and byte for byte. That covers all 23 instructions plus the ledger and payee slugs.
 - **`test/agent.live.test.ts`:** an owner creates and opens a campaign; the server's agent module opens the ledger with a token encrypted by the TypeScript CDK and approves jack's 2006 post. Validators must decrypt the token, read the post through Latch and agree, and the program must rule `OutsideRound`. The test then ends the campaign and withdraws.
 - **`e2e/owner.spec.ts`:** in a real browser, creates a wallet, uses the faucet, creates, funds, opens, ends and withdraws.
 - **`e2e/public.spec.ts`:**
@@ -66,30 +84,28 @@ npx playwright test                  # e2e on real DevNet (isolated server on :3
   - Explore lists campaigns;
   - Guardrails is live;
   - the relay refuses abuse;
-  - an unauthenticated submit gets 401.
+  - the retired v1 `/api/submit` and `/api/link` answer 410.
+- **`e2e/owner-app.spec.ts`, `contributor.spec.ts`, `review.spec.ts`, `pages.spec.ts`:** the owner wizard and go-live
+  on DevNet, joining and submitting, the review queue, and every app page.
+- **`test/audit-fixes.test.ts`:** the audit fixes on the web side (sign-in return path, Neon rate limits, typed cookies,
+  housekeeping).
 
-## Configuration (`apps/web/.env.local`, gitignored; see `.env.local.example`)
+## Configuration (`apps/web/.env.local`, gitignored; see `.env.example`)
 
-| Variable | Status |
+Production values live in the Vercel project `merit` (sensitive variables), and `vercel env pull` writes them here.
+
+| Variable | What |
 | --- | --- |
-| `MERIT_JUDGE_LAT`, `MERIT_X_LAT` | set (copied from `~/merit/.env`) |
-| `MERIT_AGENT_SECRET_KEY` | set (`merit-agent-devnet`, DevNet only) |
-| `MERIT_SESSION_SECRET` | set (random, local) |
-| `X_CLIENT_ID`, `X_CLIENT_SECRET` | **missing**: sign-in shows "not configured" and the submit flow stays closed |
-| `MERIT_PUBLIC_URL` | `http://localhost:3000` |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Merit's Neon database (`MERIT_DB=pglite` uses an in-memory one instead) |
+| `MERIT_JUDGE_LAT`, `MERIT_X_LAT`, `MERIT_JUDGE_LAT__<campaign>` | Latch tokens: parents, and a campaign's child judge latch |
+| `MERIT_AGENT_SECRET_KEY` | The DevNet agent key (`merit-agent-devnet`) |
+| `MERIT_SESSION_SECRET` | Signs the session, owner and OAuth cookies |
+| `X_CLIENT_ID`, `X_CLIENT_SECRET` | The X OAuth 2.0 app ("Sign in with X"), callback `<public url>/api/auth/x/callback` |
+| `MERIT_PUBLIC_URL` | The site's own URL |
+| `CRON_SECRET` | Bearer for the daily `/api/cron/agent` backstop |
+| `MERIT_CHECK_KEY` | Key the merit-check latch sends to `/api/latch/tweet-check` |
 
-## Before Vercel (needs decisions)
-
-1. **X OAuth app.** In the X developer portal, the app needs:
-   - OAuth 2.0 enabled, as a Web App (confidential client);
-   - scopes `users.read tweet.read`;
-   - callback `<public url>/api/auth/x/callback`, plus `http://localhost:3000/api/auth/x/callback` for local use.
-
-   Then provide `X_CLIENT_ID` and `X_CLIENT_SECRET`.
-2. **Durable store.** `lib/server/store.ts` keeps judge records, wallet links and campaign briefs in Merit's Neon
-   database (`store_records`), with the committed records in `data/` as a read-only fallback. They were in a Vercel
-   Blob store until 2026-10-27, when the Hobby plan's 2,000 "advanced operations" ran out. Most of those were one
-   `list` per page view: `store.campaigns()` listed the store on every render of `/explore`, `/join` and the owner
-   pages. `scripts/migrate-blob-to-neon.mjs` moved the records. Re-run it after the store unblocks on 2026-11-26 to
-   pick up what only Blob holds. No runtime code uses Blob now; the store itself was kept, not deleted.
-3. **The `merit` Vercel project:** a new project, environment variables as above, and the agent key as a sensitive variable (DevNet only).
+**Store.** `lib/server/store.ts` keeps judge records, v1 wallet links (read-only now) and campaign briefs in Neon
+(`store_records`), with the committed records in `data/` as a read-only fallback. They were in a Vercel Blob store
+until 2026-10-27, when the Hobby plan's 2,000 "advanced operations" ran out; `scripts/migrate-blob-to-neon.mjs` moved
+them. Re-run it after the store unblocks on 2026-11-26 to pick up what only Blob holds.

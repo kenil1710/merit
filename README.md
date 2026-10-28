@@ -1,7 +1,8 @@
 # Merit
 
 **Pay contributors in RLO for verified work: an AI judge scores each post through Latch-governed credentials, Rialo
-validators verify it, and the program's own timers pay. No keeper, no backend holding API keys.**
+validators verify it, and the program's own timers pay. No keeper for payouts, and the Anthropic and X API keys
+stay inside Latch.**
 
 Live on Rialo DevNet: **[merit-ruby-two.vercel.app](https://merit-ruby-two.vercel.app)**. Current campaign:
 "Rialo in your own words" ([join](https://merit-ruby-two.vercel.app/join/rialo-in-your-own-words) ·
@@ -9,7 +10,8 @@ Live on Rialo DevNet: **[merit-ruby-two.vercel.app](https://merit-ruby-two.verce
 
 ## How it works
 
-1. **Post.** A contributor signs in with X, links an embedded Rialo wallet, and submits an X post to a campaign.
+1. **Post.** A contributor signs in with X, joins a program with an embedded Rialo wallet (the wallet signs the join),
+   and submits an X post.
 2. **AI judge, through Latch.** Merit reads the post through the `merit-x` latch and scores it against the campaign's
    rubric with Claude Haiku through the `merit-judge` latch. Deterministic checks run first: authorship, round
    window, duplicates, prompt injection, eligibility. A rules engine then approves, rejects, or sends the post to the
@@ -22,7 +24,8 @@ Live on Rialo DevNet: **[merit-ruby-two.vercel.app](https://merit-ruby-two.verce
    author and round marks the entry verified.
 5. **Self-running payout.** A native `AFTER` heartbeat closes the round, repays the agent's REX and rent costs from
    the operations budget, pays verified entries in approval order, and opens the next round. No worker or cron is
-   involved.
+   involved in paying. (A daily Vercel cron only retries submissions the judge couldn't process at submit time, and
+   cleans up old rows.)
 
 ## What runs where, and the trust model
 
@@ -33,8 +36,16 @@ Live on Rialo DevNet: **[merit-ruby-two.vercel.app](https://merit-ruby-two.verce
 | **Off chain** (Next.js on Vercel + Neon Postgres) | X sign-in, the judge call, the decision engine, the review queue, the agent key that signs `approve`, signed decision records (their hash is stored on chain and re-checked by the public page) | Merit's server |
 
 **Trust model:**
-- **The agent is trusted to judge, not to pay.** A misbehaving agent can approve within the caps and spend the
-  operations budget, and nothing more. The program computes every amount and only pays entries REX verified.
+- **The agent is trusted to judge, not to pay.** The program computes every amount and only pays entries REX
+  verified. A misbehaving agent can approve within the caps and spend the operations budget. It can also `revoke`
+  unpaid entries, which withholds those payouts (it can't redirect them).
+- **The owner funds the campaign and can stop paying, but can't take what is owed without it showing.** The owner
+  can pause (payouts wait), end the campaign, set the daily cap and a round-approval threshold, and withdraw escrow
+  that no open round reserves. Since program v3 those two limits can't change while a round settles, so a closed
+  round pays under the rules it closed with. A round above the threshold waits for `approve_round`; if the owner never
+  approves it, the refund deadline returns the escrow to the owner and the entries stay unpaid on chain. A stuck
+  payout skipped with `skip_stuck` is recorded `UNFUNDED` (verified, owed, unpaid). Reviewers the owner adds can
+  approve any amount up to the per-payout cap from the review queue.
 - **REX proves facts about the post:** it exists, its author id, and that it was created inside the round. It can't
   prove the wallet belongs to that X account. That link comes from the X sign-in plus a wallet signature, and a
   payee cooldown guards wallet changes.
@@ -115,7 +126,7 @@ Everything below is on Rialo DevNet; [`docs/EVIDENCE.md`](docs/EVIDENCE.md) has 
 | Round 1: a real post judged, approved, REX-verified and paid by the timer (v1) | approve `62KditLizq1tRcvVUAcAJJpb8rXUSAxH11485dP4v1TAtA4pC8AhJTGkFJwK9Fv1U39e5RbMiKor7NJJMJHpUM8u` · verified `2zqzmbrANZMSHWj32SCQTH5Q9SMhYCLQX5h5c8PWcayn78kxij9EkJ2sAZAS1NzHvQ63QefNTHLhQDvxZE6hZyAw` · paid `5zJRRMjkp4ENcVSsNra4QFP5tJtRP7KUF3iGnbTLNHXTkwABveG1omB3vmdvW67ohycrFLDz8psTHagkZmrre4PZ` |
 | Program v2: a real post paid by the round-29 settlement | approve `461vmdeR42KBZBsBDS6FDajYwmMDJLVMzh8ADnP2cq9hQWutPZNvCxkWfh9U58fRwgtWdqgqWNJG5QttGhquMaCD` · paid 0.063 RLO `DasVS8DH1d9gdfywibgBTx2vAhnqJeS4roFDB1FatkyekV3KGYddDdmgiuepWEjazwZG8hdJfAtCTjKo15HMtUP` · round settled and next opened `5iHhTrCQ2vzVSokEmp2AQoPNw7LGvRgi4Y7itgdnwpnG1Jm2JMUNydKMu1rbUtcYy9rPSghk5zTdUafdnSgT6wbm` |
 | REX 4/4: four validators read the post through merit-x (with the campaign header) and agreed | report `8AxiHQa4JLh7fjQTM189KFaqJGp1XNsmgLPeFqBmHX54` (round 29) and `7w3qn5kdA2BdrZfjU2mnAJWdojDEoxbGBgHL4unuxfkK` (round 32, after the header requirement went live) |
-| Negative tests: 30 invalid instructions, each rejected on chain | [`deployments/devnet-negative.json`](deployments/devnet-negative.json), made by [`apps/web/scripts/negative-devnet.ts`](apps/web/scripts/negative-devnet.ts) |
+| Negative tests: 30 invalid instructions sent, 29 rejected on chain; the 30th (a forged `on_verify` that arrived after its entry finished) landed as a no-op, and its timed retry was rejected. Program v3: the audit's H-1, M-1, M-2 and M-3 cases | [`deployments/devnet-negative.json`](deployments/devnet-negative.json), made by [`apps/web/scripts/negative-devnet.ts`](apps/web/scripts/negative-devnet.ts) |
 | Latch: a bad request gets a real 403 from the right filter | Guardrails page; e2e `apps/web/e2e/public.spec.ts` |
 
 Security findings from this work were reported privately to the Rialo and Latch teams.
@@ -133,6 +144,11 @@ Security findings from this work were reported privately to the Rialo and Latch 
 - **merit-x checks the shape of a read, not that the post is a submission** (the outcall policy is ready, see above).
 - **Ledger rent is not reclaimed:** about 0.024 RLO a round with approvals, repaid to the agent from the operations
   budget.
+- **The agent backstop runs once a day.** A submission the judge couldn't process (X, Latch or the model busy, and
+  the one in-request retry failed) waits for the 06:00 UTC cron; by then its round has usually closed and it is
+  refused with that reason. Vercel Hobby allows one cron a day.
+- **One shared agent pays payee rent.** Every joining contributor makes the agent pay for an `open_payee` account,
+  and nothing repays it yet.
 
 **Roadmap:**
 1. **Payout signer through Latch:** the agent's transactions signed in Latch's enclave with `rialo_tx_signers`, and
