@@ -84,7 +84,9 @@ export default async function Home() {
             <dl className="grid grid-cols-2 gap-x-6 gap-y-10" data-testid="totals">
               <BigNumber label="RLO paid to contributors">{formatRlo(paid, 3)}</BigNumber>
               <BigNumber label="Campaigns run on chain">{campaigns.length}</BigNumber>
-              <BigNumber label="RLO repaid to the agent for REX">{formatRlo(reimbursed, 3)}</BigNumber>
+              <BigNumber label="RLO repaid to the agent for REX" note="Real campaigns only — test runs are excluded (earlier totals included them).">
+                {formatRlo(reimbursed, 3)}
+              </BigNumber>
               <BigNumber label="Keepers needed for payouts">0</BigNumber>
             </dl>
             {isReal ? (
@@ -230,11 +232,12 @@ function Heading({ title, children }: { title: ReactNode; children?: ReactNode }
   );
 }
 
-function BigNumber({ label, children }: { label: string; children: ReactNode }) {
+function BigNumber({ label, note, children }: { label: string; note?: string; children: ReactNode }) {
   return (
     <div>
       <dd className="display text-5xl leading-none tabular-nums sm:text-6xl">{children}</dd>
       <dt className="text-muted-foreground mt-3 text-sm">{label}</dt>
+      {note ? <dd className="text-muted-foreground mt-1 text-xs leading-relaxed">{note}</dd> : null}
     </div>
   );
 }
